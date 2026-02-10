@@ -65,8 +65,8 @@ public class SyncStatusSteps(ScenarioContext scenarioContext)
         Assert.True(hasTimeInfo, "Should show sync time information");
     }
 
-    [When(@"I click the ""(.*)"" button")]
-    public async Task WhenIClickTheRefreshButton(string buttonText)
+    [When(@"I click the sync status ""(.*)"" button")]
+    public async Task WhenIClickTheSyncStatusButton(string buttonText)
     {
         var button = Page.Locator("button").Filter(new() { HasText = buttonText });
         await button.First.ClickAsync();

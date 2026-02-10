@@ -44,10 +44,43 @@ public class DashboardSteps(ScenarioContext scenarioContext)
     [When(@"I click on the server card ""(.*)""")]
     public async Task WhenIClickOnTheServerCard(string serverName)
     {
+        // Wait for Blazor Server circuit to be established
+        // The circuit creates a WebSocket connection that enables interactivity
+        try
+        {
+            await Page.WaitForFunctionAsync(@"() => {
+                // Blazor Server uses a WebSocket connection. Check for circuit state
+                const blazorScript = document.querySelector('script[autostart=""false""]');
+                return !blazorScript || window._blazorCircuitStarted;
+            }", null, new() { Timeout = 5000 });
+        }
+        catch
+        {
+            // Fallback wait
+        }
+        await Task.Delay(2000); // Give Blazor extra time to hydrate components
+        
         var card = Page.Locator(".mud-card").Filter(new() { HasText = serverName });
-        await card.First.ClickAsync();
-        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-        await Task.Delay(500); // Wait for Blazor navigation
+        await card.First.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        
+        // Try clicking multiple times in case the first click doesn't register
+        for (int i = 0; i < 3; i++)
+        {
+            await card.First.ClickAsync();
+            try
+            {
+                await Page.WaitForURLAsync(url => url.Contains("/guild/"), new() { Timeout = 3000 });
+                return; // Success - navigation occurred
+            }
+            catch
+            {
+                // Navigation didn't happen, wait a bit and try again
+                await Task.Delay(1000);
+            }
+        }
+        
+        // If we got here, navigation never happened
+        throw new Exception($"Failed to navigate to guild page after clicking server card '{serverName}'");
     }
 
     [Then(@"I should be on the guild overview page for ""(.*)""")]

@@ -1,120 +1,156 @@
+using DiscordDataMirror.Application;
+using DiscordDataMirror.Application.Services;
+using DiscordDataMirror.Dashboard.Components;
+using DiscordDataMirror.Dashboard.Services;
+using DiscordDataMirror.Infrastructure;
 using DiscordDataMirror.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using MudBlazor.Services;
+using System.Net;
+using System.Net.Sockets;
 
 namespace DiscordDataMirror.E2E.Tests.Infrastructure;
 
 /// <summary>
-/// Custom WebApplicationFactory that uses SQLite in-memory for E2E testing.
-/// This avoids the need for Docker/PostgreSQL and full Aspire orchestration.
+/// Creates and manages a test web server for E2E testing with Playwright.
+/// Uses SQLite file-based database instead of PostgreSQL.
 /// </summary>
-public class TestWebApplicationFactory : WebApplicationFactory<DiscordDataMirror.Dashboard.Program>
+public class TestWebApplicationFactory : IAsyncDisposable
 {
-    private SqliteConnection? _connection;
+    private WebApplication? _app;
+    private readonly int _port;
+    private readonly string _dbPath;
+
+    public string BaseUrl => $"http://localhost:{_port}";
 
     public TestWebApplicationFactory()
     {
+        // Get a random available port
+        using var socket = new TcpListener(IPAddress.Loopback, 0);
+        socket.Start();
+        _port = ((IPEndPoint)socket.LocalEndpoint).Port;
+        socket.Stop();
+        
+        // Create a unique temp database file for this test run
+        _dbPath = Path.Combine(Path.GetTempPath(), $"discord_mirror_test_{Guid.NewGuid():N}.db");
     }
 
-    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    /// <summary>
+    /// Starts the test web server.
+    /// </summary>
+    public async Task StartAsync()
     {
-        builder.UseEnvironment("Testing");
-
-        builder.ConfigureServices(services =>
+        // Find the Dashboard project path
+        var dashboardAssembly = typeof(DiscordDataMirror.Dashboard.Program).Assembly;
+        var dashboardPath = Path.GetDirectoryName(dashboardAssembly.Location)!;
+        
+        // Navigate up to find the project root (from bin/Debug/net10.0)
+        var projectRoot = Path.GetFullPath(Path.Combine(dashboardPath, "..", "..", "..", "..", "..", "src", "DiscordDataMirror.Dashboard"));
+        
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
-            // Keep the connection open for the lifetime of the factory
-            _connection = new SqliteConnection("DataSource=:memory:");
-            _connection.Open();
-
-            // Remove ALL existing DbContext-related service registrations
-            var typesToRemove = new[]
-            {
-                typeof(DbContextOptions<DiscordMirrorDbContext>),
-                typeof(DbContextOptions),
-                typeof(DiscordMirrorDbContext),
-                typeof(IDbContextFactory<DiscordMirrorDbContext>)
-            };
-
-            foreach (var type in typesToRemove)
-            {
-                var descriptors = services.Where(d => d.ServiceType == type).ToList();
-                foreach (var descriptor in descriptors)
-                {
-                    services.Remove(descriptor);
-                }
-            }
-
-            // Also remove any service that has DbContext in its implementation
-            var dbContextDescriptors = services
-                .Where(d => d.ImplementationType?.Name.Contains("DbContext") == true ||
-                           d.ServiceType.Name.Contains("DbContext"))
-                .ToList();
-            foreach (var descriptor in dbContextDescriptors)
-            {
-                services.Remove(descriptor);
-            }
-
-            // Register SQLite DbContext
-            services.AddDbContext<DiscordMirrorDbContext>(options =>
-            {
-                options.UseSqlite(_connection);
-            });
-
-            // Register factory for Blazor components - use same connection
-            services.AddSingleton<IDbContextFactory<DiscordMirrorDbContext>>(sp =>
-            {
-                var options = new DbContextOptionsBuilder<DiscordMirrorDbContext>()
-                    .UseSqlite(_connection!)
-                    .Options;
-                return new TestDbContextFactory(options);
-            });
+            EnvironmentName = "Testing",
+            ContentRootPath = projectRoot,
+            WebRootPath = Path.Combine(projectRoot, "wwwroot")
         });
 
-        // Configure the service provider after services are configured
-        builder.ConfigureServices(services =>
+        // Configure Kestrel to listen on our port
+        builder.WebHost.UseUrls(BaseUrl);
+
+        // Use connection string for file-based SQLite (handles concurrency better)
+        var connectionString = $"Data Source={_dbPath};Cache=Shared";
+
+        // SQLite DbContext (replaces Aspire's AddNpgsqlDbContext)
+        builder.Services.AddDbContext<DiscordMirrorDbContext>(options =>
         {
-            // Build service provider to create database and seed data
-            var sp = services.BuildServiceProvider();
-            using var scope = sp.CreateScope();
+            options.UseSqlite(connectionString);
+        });
+
+        // DbContext factory for Blazor components
+        builder.Services.AddDbContextFactory<DiscordMirrorDbContext>(options =>
+        {
+            options.UseSqlite(connectionString);
+        }, ServiceLifetime.Scoped);
+
+        // Add application and infrastructure services
+        builder.Services.AddApplication();
+        builder.Services.AddInfrastructure();
+
+        // Add SignalR services
+        builder.Services.AddSignalR();
+        builder.Services.AddScoped<SyncHubConnection>();
+        builder.Services.AddSingleton<ISyncEventPublisher, SignalRSyncEventPublisher>();
+
+        // Add MudBlazor services
+        builder.Services.AddMudServices();
+
+        // Add Blazor services
+        builder.Services.AddRazorComponents()
+            .AddInteractiveServerComponents();
+
+        // Health check endpoints (simplified, no OpenTelemetry)
+        builder.Services.AddHealthChecks();
+
+        _app = builder.Build();
+
+        // Create database and seed test data
+        using (var scope = _app.Services.CreateScope())
+        {
             var context = scope.ServiceProvider.GetRequiredService<DiscordMirrorDbContext>();
-
-            // Create database schema
             context.Database.EnsureCreated();
+            await TestDataSeeder.SeedAsync(context);
+        }
 
-            // Seed test data
-            TestDataSeeder.SeedAsync(context).GetAwaiter().GetResult();
-        });
+        // Configure the HTTP request pipeline
+        _app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+        _app.UseAntiforgery();
+
+        // Use static files instead of MapStaticAssets for testing
+        // (MapStaticAssets requires manifest files not available in test context)
+        _app.UseStaticFiles();
+        
+        _app.MapRazorComponents<App>()
+            .AddInteractiveServerRenderMode();
+
+        // Map SignalR hub
+        _app.MapHub<DiscordDataMirror.Dashboard.Hubs.SyncHub>("/hubs/sync");
+
+        // Map health endpoints
+        _app.MapHealthChecks("/health");
+
+        // Start the server
+        await _app.StartAsync();
     }
 
-    protected override void Dispose(bool disposing)
+    public async Task StopAsync()
     {
-        base.Dispose(disposing);
-        if (disposing)
+        if (_app != null)
         {
-            _connection?.Dispose();
+            await _app.StopAsync();
+            await _app.DisposeAsync();
+            _app = null;
         }
     }
-}
 
-/// <summary>
-/// Simple DbContext factory for testing that creates contexts with the same connection.
-/// </summary>
-internal class TestDbContextFactory : IDbContextFactory<DiscordMirrorDbContext>
-{
-    private readonly DbContextOptions<DiscordMirrorDbContext> _options;
-
-    public TestDbContextFactory(DbContextOptions<DiscordMirrorDbContext> options)
+    public async ValueTask DisposeAsync()
     {
-        _options = options;
-    }
-
-    public DiscordMirrorDbContext CreateDbContext()
-    {
-        return new DiscordMirrorDbContext(_options);
+        await StopAsync();
+        
+        // Clean up the temp database file
+        try
+        {
+            if (File.Exists(_dbPath))
+            {
+                File.Delete(_dbPath);
+            }
+        }
+        catch
+        {
+            // Ignore cleanup errors
+        }
     }
 }

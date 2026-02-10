@@ -132,8 +132,8 @@ public class ChannelBrowserSteps(ScenarioContext scenarioContext)
         // Note: This might pass if the element is simply not in the current view
     }
 
-    [When(@"I click the ""(.*)"" button")]
-    public async Task WhenIClickTheButton(string buttonText)
+    [When(@"I click the channel details ""(.*)"" button")]
+    public async Task WhenIClickTheChannelDetailsButton(string buttonText)
     {
         var button = Page.Locator("button, a.mud-button, a").Filter(new() { HasText = buttonText });
         await button.First.ClickAsync();

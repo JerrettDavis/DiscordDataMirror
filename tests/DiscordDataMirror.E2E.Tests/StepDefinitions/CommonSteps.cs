@@ -160,9 +160,32 @@ public class CommonSteps(ScenarioContext scenarioContext)
         await WaitForPageLoad();
     }
 
+    [When(@"I click the ""(.*)"" button")]
+    public async Task WhenIClickTheButton(string buttonText)
+    {
+        var button = Page.Locator("button, a.mud-button, a").Filter(new() { HasText = buttonText });
+        await button.First.ClickAsync();
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await Task.Delay(500);
+    }
+
     private async Task WaitForPageLoad()
     {
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        // Wait for Blazor Server SignalR circuit to be established
+        // This is indicated by the blazor-reconnect-indicator not being visible
+        try
+        {
+            // Wait up to 5 seconds for interactive mode to be ready
+            await Page.WaitForFunctionAsync(@"() => {
+                // Check if Blazor has initialized (circuit is connected)
+                return window.Blazor && window.Blazor._internal;
+            }", null, new() { Timeout = 5000 });
+        }
+        catch
+        {
+            // Fallback: just wait a bit if Blazor check fails
+        }
         // Additional wait for Blazor to render
         await Task.Delay(500);
     }

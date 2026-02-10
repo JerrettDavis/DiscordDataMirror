@@ -103,8 +103,8 @@ public class MessageViewerSteps(ScenarioContext scenarioContext)
         Assert.True(messages > 0, "Should still see messages after loading older");
     }
 
-    [When(@"I click the ""(.*)"" button")]
-    public async Task WhenIClickTheOldestNewestButton(string buttonText)
+    [When(@"I click the message navigation ""(.*)"" button")]
+    public async Task WhenIClickTheMessageNavigationButton(string buttonText)
     {
         var button = Page.Locator("button").Filter(new() { HasText = buttonText });
         await button.First.ClickAsync();
