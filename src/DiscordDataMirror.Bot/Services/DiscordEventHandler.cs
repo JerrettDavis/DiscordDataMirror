@@ -431,7 +431,8 @@ public class DiscordEventHandler
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
             // Ensure user exists
-            await SyncUserAsync(mediator, message.Author!);
+            var author = message.Author!;
+            await SyncUserAsync(mediator, author);
 
             // Sync message - handle referenced message ID carefully
             var referencedMessageId = message.Reference?.MessageId;
@@ -442,7 +443,7 @@ public class DiscordEventHandler
             await mediator.Send(new UpsertMessageCommand(
                 message.Id.ToString(),
                 message.Channel.Id.ToString(),
-                message.Author.Id.ToString(),
+                author.Id.ToString(),
                 message.Content,
                 message.CleanContent,
                 MapMessageType(message.Type),
