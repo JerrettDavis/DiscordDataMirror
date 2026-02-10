@@ -10,5 +10,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/DiscordDataMirror.Dashboard.Tests/DiscordDataMirror.Dashboard.Tests.csproj" />
+    <Project Path="tests/DiscordDataMirror.E2E.Tests/DiscordDataMirror.E2E.Tests.csproj" />
   </Folder>
 </Solution>

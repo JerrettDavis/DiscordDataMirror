@@ -64,7 +64,7 @@ jobs:
       - name: Build solution
         run: dotnet build ${{ env.SOLUTION_NAME }} --no-restore --configuration Release
 
-      - name: Run tests
+      - name: Run unit tests
         run: |
           dotnet test ${{ env.SOLUTION_NAME }} \
             --no-build \
@@ -72,7 +72,7 @@ jobs:
             --verbosity normal \
             --collect:"XPlat Code Coverage" \
             --results-directory ./coverage \
-            --filter "Category!=Integration"
+            --filter "FullyQualifiedName!~E2E"
         env:
           ConnectionStrings__discordmirror: Host=localhost;Port=5432;Database=discordmirror_test;Username=postgres;Password=postgres
 
@@ -83,6 +83,56 @@ jobs:
           directory: ./coverage
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/Directory.Build.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.SOLUTION_NAME }}
+
+      - name: Build E2E tests
+        run: dotnet build tests/DiscordDataMirror.E2E.Tests --configuration Release
+
+      - name: Install Playwright browsers
+        run: |
+          dotnet tool install --global Microsoft.Playwright.CLI
+          playwright install chromium --with-deps
+
+      - name: Run E2E tests
+        run: |
+          dotnet test tests/DiscordDataMirror.E2E.Tests \
+            --no-build \
+            --configuration Release \
+            --verbosity normal \
+            --logger "trx;LogFileName=e2e-results.trx"
+        env:
+          ASPNETCORE_ENVIRONMENT: Testing
+
+      - name: Upload E2E test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: tests/DiscordDataMirror.E2E.Tests/TestResults/
 
   format-check:
     name: Code Format Check
