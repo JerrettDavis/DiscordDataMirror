@@ -29,18 +29,18 @@ public interface IAttachmentStorageService
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result of the download operation.</returns>
     Task<AttachmentDownloadResult> DownloadAsync(
-        Attachment attachment, 
-        Snowflake guildId, 
-        Snowflake channelId, 
+        Attachment attachment,
+        Snowflake guildId,
+        Snowflake channelId,
         CancellationToken ct = default);
-    
+
     /// <summary>
     /// Downloads multiple attachments, respecting concurrency limits.
     /// </summary>
     Task<IReadOnlyList<AttachmentDownloadResult>> DownloadBatchAsync(
         IEnumerable<(Attachment Attachment, Snowflake GuildId, Snowflake ChannelId)> attachments,
         CancellationToken ct = default);
-    
+
     /// <summary>
     /// Queues an attachment for background download.
     /// </summary>
@@ -49,39 +49,39 @@ public interface IAttachmentStorageService
         Snowflake guildId,
         Snowflake channelId,
         CancellationToken ct = default);
-    
+
     /// <summary>
     /// Processes queued downloads in the background.
     /// </summary>
     Task ProcessQueueAsync(CancellationToken ct = default);
-    
+
     /// <summary>
     /// Gets the local file path for a cached attachment.
     /// Returns null if not cached.
     /// </summary>
     Task<string?> GetLocalPathAsync(Snowflake attachmentId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Gets a stream to read the cached attachment file.
     /// Returns null if not cached.
     /// </summary>
     Task<Stream?> GetFileStreamAsync(Snowflake attachmentId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Checks if an attachment is cached locally.
     /// </summary>
     Task<bool> IsCachedAsync(Snowflake attachmentId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Deletes a cached attachment file.
     /// </summary>
     Task<bool> DeleteCachedAsync(Snowflake attachmentId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Gets attachment storage statistics.
     /// </summary>
     Task<AttachmentStorageStats> GetStorageStatsAsync(CancellationToken ct = default);
-    
+
     /// <summary>
     /// Validates storage path is accessible and has space.
     /// </summary>

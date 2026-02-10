@@ -10,11 +10,11 @@ public class UserRepository : GenericRepository<User, Snowflake>, IUserRepositor
     public UserRepository(DiscordMirrorDbContext context) : base(context)
     {
     }
-    
+
     public async Task<User?> GetByUsernameAsync(string username, CancellationToken ct = default)
         => await DbSet
             .FirstOrDefaultAsync(u => u.Username == username, ct);
-    
+
     public async Task<IReadOnlyList<User>> SearchByUsernameAsync(string searchTerm, int take = 20, CancellationToken ct = default)
         => await DbSet
             .Where(u => EF.Functions.ILike(u.Username, $"%{searchTerm}%") ||

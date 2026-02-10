@@ -23,13 +23,13 @@ public class UserMap : Entity<int>
     public MappingType MappingType { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public string? Notes { get; private set; }
-    
+
     // Navigation
     public User? CanonicalUser { get; private set; }
     public User? MappedUser { get; private set; }
-    
+
     private UserMap() { } // EF Core
-    
+
     public UserMap(Snowflake canonicalUserId, Snowflake mappedUserId, MappingType mappingType, decimal confidence = 1.0m)
     {
         CanonicalUserId = canonicalUserId;
@@ -38,15 +38,15 @@ public class UserMap : Entity<int>
         Confidence = Math.Clamp(confidence, 0, 1);
         CreatedAt = DateTime.UtcNow;
     }
-    
+
     public void UpdateConfidence(decimal confidence, string? notes = null)
     {
         Confidence = Math.Clamp(confidence, 0, 1);
         Notes = notes ?? Notes;
     }
-    
+
     public void SetNotes(string notes) => Notes = notes;
-    
+
     /// <summary>
     /// Whether this mapping is confirmed (manual or high confidence).
     /// </summary>

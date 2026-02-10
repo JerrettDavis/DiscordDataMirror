@@ -10,23 +10,23 @@ public class GuildRepository : GenericRepository<Guild, Snowflake>, IGuildReposi
     public GuildRepository(DiscordMirrorDbContext context) : base(context)
     {
     }
-    
+
     public async Task<Guild?> GetWithChannelsAsync(Snowflake id, CancellationToken ct = default)
         => await DbSet
             .Include(g => g.Channels)
             .FirstOrDefaultAsync(g => g.Id == id, ct);
-    
+
     public async Task<Guild?> GetWithRolesAsync(Snowflake id, CancellationToken ct = default)
         => await DbSet
             .Include(g => g.Roles)
             .FirstOrDefaultAsync(g => g.Id == id, ct);
-    
+
     public async Task<Guild?> GetWithMembersAsync(Snowflake id, CancellationToken ct = default)
         => await DbSet
             .Include(g => g.Members)
                 .ThenInclude(m => m.User)
             .FirstOrDefaultAsync(g => g.Id == id, ct);
-    
+
     public async Task<Guild?> GetFullAsync(Snowflake id, CancellationToken ct = default)
         => await DbSet
             .Include(g => g.Channels)
@@ -34,13 +34,13 @@ public class GuildRepository : GenericRepository<Guild, Snowflake>, IGuildReposi
             .Include(g => g.Members)
                 .ThenInclude(m => m.User)
             .FirstOrDefaultAsync(g => g.Id == id, ct);
-    
+
     public async Task<IReadOnlyList<Guild>> GetAllWithStatsAsync(CancellationToken ct = default)
         => await DbSet
             .Include(g => g.Channels)
             .Include(g => g.Members)
             .ToListAsync(ct);
-    
+
     public async Task<IReadOnlyList<Guild>> GetNeedingSyncAsync(TimeSpan syncInterval, CancellationToken ct = default)
     {
         var cutoff = DateTime.UtcNow - syncInterval;

@@ -21,10 +21,10 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString));
         services.AddDbContext<DiscordMirrorDbContext>(options =>
             options.UseNpgsql(connectionString));
-        
+
         return services.AddInfrastructureCore();
     }
-    
+
     /// <summary>
     /// For Aspire integration - uses pre-configured DbContext.
     /// </summary>
@@ -32,12 +32,12 @@ public static class DependencyInjection
     {
         return services.AddInfrastructureCore();
     }
-    
+
     private static IServiceCollection AddInfrastructureCore(this IServiceCollection services)
     {
         // Unit of Work
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<DiscordMirrorDbContext>());
-        
+
         // Repositories
         services.AddScoped(typeof(IRepository<,>), typeof(GenericRepository<,>));
         services.AddScoped<IGuildRepository, GuildRepository>();
@@ -52,7 +52,7 @@ public static class DependencyInjection
         services.AddScoped<IEmbedRepository, EmbedRepository>();
         services.AddScoped<ISyncStateRepository, SyncStateRepository>();
         services.AddScoped<IUserMapRepository, UserMapRepository>();
-        
+
         // Sync Services
         services.AddScoped<IGuildSyncService, GuildSyncService>();
         services.AddScoped<IChannelSyncService, ChannelSyncService>();
@@ -60,11 +60,11 @@ public static class DependencyInjection
         services.AddScoped<IUserSyncService, UserSyncService>();
         services.AddScoped<IMessageSyncService, MessageSyncService>();
         services.AddScoped<IReactionSyncService, ReactionSyncService>();
-        
+
         // Attachment Services
         services.AddScoped<IAttachmentStorageService, LocalAttachmentStorageService>();
         services.AddScoped<IAttachmentCleanupService, AttachmentCleanupService>();
-        
+
         // Configure HttpClient for Discord CDN downloads
         services.AddHttpClient("DiscordCdn", client =>
         {
@@ -76,16 +76,16 @@ public static class DependencyInjection
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
         })
         .AddPolicyHandler(GetRetryPolicy());
-        
+
         return services;
     }
-    
+
     private static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
     {
         return HttpPolicyExtensions
             .HandleTransientHttpError()
             .OrResult(msg => msg.StatusCode == HttpStatusCode.TooManyRequests)
-            .WaitAndRetryAsync(3, retryAttempt => 
+            .WaitAndRetryAsync(3, retryAttempt =>
                 TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)) + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 1000)));
     }
 }

@@ -10,19 +10,19 @@ public enum AttachmentDownloadStatus
 {
     /// <summary>Not yet attempted.</summary>
     Pending = 0,
-    
+
     /// <summary>Currently downloading.</summary>
     InProgress = 1,
-    
+
     /// <summary>Successfully downloaded and cached.</summary>
     Completed = 2,
-    
+
     /// <summary>Download failed.</summary>
     Failed = 3,
-    
+
     /// <summary>Skipped (too large, blocked type, etc.).</summary>
     Skipped = 4,
-    
+
     /// <summary>Queued for background download.</summary>
     Queued = 5
 }
@@ -42,7 +42,7 @@ public class Attachment : Entity<Snowflake>
     public string? ContentType { get; private set; }
     public string? LocalPath { get; private set; }
     public bool IsCached { get; private set; }
-    
+
     // Download tracking
     public AttachmentDownloadStatus DownloadStatus { get; private set; } = AttachmentDownloadStatus.Pending;
     public string? ContentHash { get; private set; }
@@ -50,12 +50,12 @@ public class Attachment : Entity<Snowflake>
     public int DownloadAttempts { get; private set; }
     public string? LastDownloadError { get; private set; }
     public string? SkipReason { get; private set; }
-    
+
     // Navigation
     public Message? Message { get; private set; }
-    
+
     private Attachment() { } // EF Core
-    
+
     public Attachment(Snowflake id, Snowflake messageId, string filename, string url, long size)
     {
         Id = id;
@@ -64,7 +64,7 @@ public class Attachment : Entity<Snowflake>
         Url = url;
         Size = size;
     }
-    
+
     public void Update(string? proxyUrl, int? width, int? height, string? contentType)
     {
         ProxyUrl = proxyUrl;
@@ -72,7 +72,7 @@ public class Attachment : Entity<Snowflake>
         Height = height;
         ContentType = contentType;
     }
-    
+
     /// <summary>
     /// Marks the attachment as successfully cached.
     /// </summary>
@@ -85,7 +85,7 @@ public class Attachment : Entity<Snowflake>
         DownloadedAt = DateTime.UtcNow;
         LastDownloadError = null;
     }
-    
+
     /// <summary>
     /// Marks the download as in progress.
     /// </summary>
@@ -94,7 +94,7 @@ public class Attachment : Entity<Snowflake>
         DownloadStatus = AttachmentDownloadStatus.InProgress;
         DownloadAttempts++;
     }
-    
+
     /// <summary>
     /// Marks the download as queued for background processing.
     /// </summary>
@@ -102,7 +102,7 @@ public class Attachment : Entity<Snowflake>
     {
         DownloadStatus = AttachmentDownloadStatus.Queued;
     }
-    
+
     /// <summary>
     /// Marks the download as failed.
     /// </summary>
@@ -113,7 +113,7 @@ public class Attachment : Entity<Snowflake>
         IsCached = false;
         LocalPath = null;
     }
-    
+
     /// <summary>
     /// Marks the attachment as skipped (won't be downloaded).
     /// </summary>
@@ -122,7 +122,7 @@ public class Attachment : Entity<Snowflake>
         DownloadStatus = AttachmentDownloadStatus.Skipped;
         SkipReason = reason;
     }
-    
+
     /// <summary>
     /// Resets the cache status (e.g., when file is missing).
     /// </summary>
@@ -134,17 +134,17 @@ public class Attachment : Entity<Snowflake>
         DownloadedAt = null;
         DownloadStatus = AttachmentDownloadStatus.Pending;
     }
-    
+
     /// <summary>
     /// Whether this attachment is an image based on content type or file extension.
     /// </summary>
-    public bool IsImage => ContentType?.StartsWith("image/") == true 
+    public bool IsImage => ContentType?.StartsWith("image/") == true
         || Filename.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
         || Filename.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
         || Filename.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)
         || Filename.EndsWith(".gif", StringComparison.OrdinalIgnoreCase)
         || Filename.EndsWith(".webp", StringComparison.OrdinalIgnoreCase);
-    
+
     /// <summary>
     /// Whether this attachment is a video based on content type or file extension.
     /// </summary>
@@ -152,7 +152,7 @@ public class Attachment : Entity<Snowflake>
         || Filename.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase)
         || Filename.EndsWith(".webm", StringComparison.OrdinalIgnoreCase)
         || Filename.EndsWith(".mov", StringComparison.OrdinalIgnoreCase);
-    
+
     /// <summary>
     /// Whether this attachment is audio based on content type or file extension.
     /// </summary>

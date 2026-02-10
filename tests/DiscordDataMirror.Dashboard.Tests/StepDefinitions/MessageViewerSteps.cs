@@ -26,36 +26,36 @@ public class MessageViewerSteps
         await _driver.NavigateToAsync("/");
         var page = await _driver.GetPageAsync();
         await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-        
+
         // Click first server
         var serverCards = page.Locator(".mud-card").Filter(new() { HasText = "channels" });
         if (await serverCards.CountAsync() > 0)
         {
             await serverCards.First.ClickAsync();
             await _driver.WaitForUrlContainsAsync("/guild/");
-            
+
             // Extract guild ID
             var match = System.Text.RegularExpressions.Regex.Match(page.Url, @"/guild/(\d+)");
             if (match.Success) _guildId = match.Groups[1].Value;
-            
+
             // Navigate to channels
             await _driver.NavigateToAsync($"/guild/{_guildId}/channels");
             await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-            
+
             // Click first channel to view details
             var channels = page.Locator(".channel-item");
             if (await channels.CountAsync() > 0)
             {
                 await channels.First.ClickAsync();
                 await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-                
+
                 // Click View Messages
                 var viewBtn = page.GetByRole(AriaRole.Button, new() { Name = "View Messages" });
                 if (await viewBtn.CountAsync() > 0)
                 {
                     await viewBtn.ClickAsync();
                     await _driver.WaitForUrlContainsAsync("/channel/");
-                    
+
                     // Extract channel ID
                     match = System.Text.RegularExpressions.Regex.Match(page.Url, @"/channel/(\d+)");
                     if (match.Success) _currentChannelId = match.Groups[1].Value;
@@ -69,11 +69,11 @@ public class MessageViewerSteps
     {
         var page = await _driver.GetPageAsync();
         await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-        
+
         // Look for message cards or message groups
         var messages = page.Locator(".message-group, .message-card, [class*='message']");
         var count = await messages.CountAsync();
-        
+
         // Could be 0 if channel is empty
         _initialMessageCount = count;
     }
@@ -82,7 +82,7 @@ public class MessageViewerSteps
     public async Task ThenEachMessageShouldDisplayTheAuthorName()
     {
         var page = await _driver.GetPageAsync();
-        
+
         if (_initialMessageCount > 0)
         {
             // Message headers contain author info
@@ -96,7 +96,7 @@ public class MessageViewerSteps
     public async Task ThenEachMessageShouldDisplayTheMessageContent()
     {
         var page = await _driver.GetPageAsync();
-        
+
         if (_initialMessageCount > 0)
         {
             var content = page.Locator(".message-content, [class*='content']");
@@ -109,7 +109,7 @@ public class MessageViewerSteps
     public async Task ThenEachMessageShouldDisplayATimestamp()
     {
         var page = await _driver.GetPageAsync();
-        
+
         if (_initialMessageCount > 0)
         {
             var timestamps = page.Locator(".message-timestamp, [class*='timestamp'], time");
@@ -122,7 +122,7 @@ public class MessageViewerSteps
     public async Task ThenConsecutiveMessagesShouldBeGrouped()
     {
         var page = await _driver.GetPageAsync();
-        
+
         var groups = page.Locator(".message-group");
         // Groups contain multiple messages
         await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
@@ -132,7 +132,7 @@ public class MessageViewerSteps
     public async Task ThenIShouldSeeBreadcrumbNavigation()
     {
         var page = await _driver.GetPageAsync();
-        
+
         var breadcrumbs = page.Locator(".breadcrumbs, [class*='breadcrumb']");
         await Assertions.Expect(breadcrumbs).ToBeVisibleAsync();
     }
@@ -141,7 +141,7 @@ public class MessageViewerSteps
     public async Task WhenIClickOnTheGuildNameInTheBreadcrumb()
     {
         var page = await _driver.GetPageAsync();
-        
+
         var breadcrumbLinks = page.Locator(".breadcrumb-item a, .breadcrumbs a");
         var guildLink = breadcrumbLinks.Nth(1); // Second link should be guild
         await guildLink.ClickAsync();
@@ -176,7 +176,7 @@ public class MessageViewerSteps
     {
         var page = await _driver.GetPageAsync();
         await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-        
+
         var messages = page.Locator(".message-group, .message-card");
         var count = await messages.CountAsync();
         count.Should().BeGreaterThanOrEqualTo(_initialMessageCount);
@@ -217,7 +217,7 @@ public class MessageViewerSteps
     public async Task WhenIEnterASearchTermInTheSearchField()
     {
         var page = await _driver.GetPageAsync();
-        
+
         var searchInput = page.Locator("input[placeholder*='Search']").First;
         await searchInput.FillAsync("test");
     }
@@ -247,15 +247,15 @@ public class MessageViewerSteps
             await _driver.NavigateToAsync($"/guild/{_guildId}/channels");
             var page = await _driver.GetPageAsync();
             await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-            
+
             var channels = page.Locator(".channel-item");
             var count = await channels.CountAsync();
-            
+
             if (count > 1)
             {
                 await channels.Nth(1).ClickAsync();
                 await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-                
+
                 var viewBtn = page.GetByRole(AriaRole.Button, new() { Name = "View Messages" });
                 if (await viewBtn.CountAsync() > 0)
                 {

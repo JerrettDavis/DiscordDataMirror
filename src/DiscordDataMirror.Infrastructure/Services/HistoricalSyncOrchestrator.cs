@@ -65,14 +65,14 @@ public class HistoricalSyncOrchestrator
     public async Task SyncAllGuildsAsync(CancellationToken ct = default)
     {
         _logger.LogInformation("Starting historical sync of all guilds");
-        
+
         var guilds = _discordClient.Guilds.ToList();
         _logger.LogInformation("Found {GuildCount} guilds to sync", guilds.Count);
-        
+
         foreach (var guild in guilds)
         {
             ct.ThrowIfCancellationRequested();
-            
+
             try
             {
                 await SyncGuildAsync(guild, ct);
@@ -83,7 +83,7 @@ public class HistoricalSyncOrchestrator
                 await UpdateSyncState(EntityTypeGuild, guild.Id.ToString(), SyncStatus.Failed, ex.Message, ct);
             }
         }
-        
+
         _logger.LogInformation("Completed historical sync of all guilds");
     }
 
@@ -94,11 +94,11 @@ public class HistoricalSyncOrchestrator
     {
         var guildIdStr = guild.Id.ToString();
         _logger.LogInformation("Starting sync for guild: {GuildName} ({GuildId})", guild.Name, guild.Id);
-        
+
         var syncState = await GetOrCreateSyncState(EntityTypeGuild, guildIdStr, ct);
         syncState.StartSync();
         await _unitOfWork.SaveChangesAsync(ct);
-        
+
         try
         {
             // Step 1: Sync guild metadata
@@ -113,38 +113,38 @@ public class HistoricalSyncOrchestrator
                 null,
                 ct);
             Console.WriteLine("[SYNC] Step 1 complete");
-            
+
             // Step 2: Sync roles
             Console.WriteLine($"[SYNC] Step 2: Syncing {guild.Roles.Count} roles...");
             await SyncRolesAsync(guild, ct);
             Console.WriteLine("[SYNC] Step 2 complete");
-            
+
             // Step 3: Sync channels (including categories and threads)
             Console.WriteLine($"[SYNC] Step 3: Syncing {guild.Channels.Count} channels...");
             await SyncChannelsAsync(guild, ct);
             Console.WriteLine("[SYNC] Step 3 complete");
-            
+
             // Step 4: Sync users/members
             Console.WriteLine("[SYNC] Step 4: Syncing members...");
             await SyncMembersAsync(guild, ct);
             Console.WriteLine("[SYNC] Step 4 complete");
-            
+
             // Step 5: Sync messages for each text channel
             Console.WriteLine("[SYNC] Step 5: Syncing messages...");
             await SyncAllChannelMessagesAsync(guild, ct);
             Console.WriteLine("[SYNC] Step 5 complete");
-            
+
             // Mark as complete
             syncState.CompleteSync();
             await _unitOfWork.SaveChangesAsync(ct);
-            
+
             Console.WriteLine($"[SYNC] Completed sync for guild: {guild.Name}");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[SYNC] FAILED: {ex.Message}");
             Console.WriteLine($"[SYNC] Stack trace: {ex.StackTrace}");
-            _logger.LogError(ex, "[{GuildName}] Sync failed with error: {Error}\nStack trace: {StackTrace}", 
+            _logger.LogError(ex, "[{GuildName}] Sync failed with error: {Error}\nStack trace: {StackTrace}",
                 guild.Name, ex.Message, ex.StackTrace);
             syncState.FailSync(ex.Message);
             await _unitOfWork.SaveChangesAsync(ct);
@@ -157,7 +157,7 @@ public class HistoricalSyncOrchestrator
         foreach (var role in guild.Roles)
         {
             ct.ThrowIfCancellationRequested();
-            
+
             await _roleSyncService.SyncRoleAsync(
                 new Snowflake(role.Id),
                 new Snowflake(guild.Id),
@@ -170,7 +170,7 @@ public class HistoricalSyncOrchestrator
                 role.IsManaged,
                 null,
                 ct);
-            
+
             await Task.Delay(_syncOptions.RateLimitDelayMs / 5, ct); // Roles are fast
         }
     }
@@ -181,19 +181,19 @@ public class HistoricalSyncOrchestrator
         foreach (var channel in guild.Channels.OrderBy(c => c.Position))
         {
             ct.ThrowIfCancellationRequested();
-            
+
             try
             {
                 await SyncChannelAsync(channel, guild.Id, ct);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[{GuildName}] Failed to sync channel {ChannelName} ({ChannelId})", 
+                _logger.LogError(ex, "[{GuildName}] Failed to sync channel {ChannelName} ({ChannelId})",
                     guild.Name, channel.Name, channel.Id);
                 throw;
             }
         }
-        
+
         // Then sync active/cached threads
         _logger.LogDebug("[{GuildName}] Syncing cached threads...", guild.Name);
         try
@@ -219,7 +219,7 @@ public class HistoricalSyncOrchestrator
         var topic = (channel as SocketTextChannel)?.Topic;
         var isNsfw = (channel as SocketTextChannel)?.IsNsfw ?? false;
         var parentId = (channel as INestedChannel)?.CategoryId;
-        
+
         await _channelSyncService.SyncChannelAsync(
             new Snowflake(channel.Id),
             new Snowflake(guildId),
@@ -244,7 +244,7 @@ public class HistoricalSyncOrchestrator
             ThreadType.NewsThread => ChannelType.NewsThread,
             _ => ChannelType.PublicThread
         };
-        
+
         await _channelSyncService.SyncChannelAsync(
             new Snowflake(thread.Id),
             new Snowflake(guildId),
@@ -257,12 +257,12 @@ public class HistoricalSyncOrchestrator
             thread.CreatedAt.UtcDateTime,
             null,
             ct);
-        
+
         // Then sync thread-specific data
-        var archiveTimestamp = thread.ArchiveTimestamp != default 
-            ? thread.ArchiveTimestamp.UtcDateTime 
+        var archiveTimestamp = thread.ArchiveTimestamp != default
+            ? thread.ArchiveTimestamp.UtcDateTime
             : (DateTime?)null;
-            
+
         await _channelSyncService.SyncThreadAsync(
             new Snowflake(thread.Id),
             new Snowflake(thread.ParentChannel.Id),
@@ -279,19 +279,19 @@ public class HistoricalSyncOrchestrator
     private async Task SyncMembersAsync(SocketGuild guild, CancellationToken ct)
     {
         _logger.LogInformation("[{GuildName}] Starting member sync, downloading users...", guild.Name);
-        
+
         // Download all users if not already downloaded
         await guild.DownloadUsersAsync();
-        
+
         var members = guild.Users.ToList();
         _logger.LogInformation("[{GuildName}] Downloaded {MemberCount} members, processing...", guild.Name, members.Count);
-        
+
         // Log each member ID for debugging
         foreach (var m in members)
         {
             _logger.LogDebug("[{GuildName}] Member: {Username} ({UserId})", guild.Name, m.Username, m.Id);
         }
-        
+
         var memberData = new List<GuildMemberData>();
         foreach (var m in members)
         {
@@ -300,13 +300,13 @@ public class HistoricalSyncOrchestrator
                 Console.WriteLine($"[SYNC] Processing member: {m.Username} ({m.Id})");
                 var discrim = m.Discriminator;
                 Console.WriteLine($"[SYNC] Discriminator: '{discrim}'");
-                
+
                 var userId = new Snowflake(m.Id);
                 Console.WriteLine($"[SYNC] Created userId snowflake: {userId}");
-                
+
                 var roleIds = m.Roles.Select(r => r.Id.ToString()).ToList();
                 Console.WriteLine($"[SYNC] Got {roleIds.Count} roles");
-                
+
                 memberData.Add(new GuildMemberData(
                     userId,
                     m.Username,
@@ -327,24 +327,24 @@ public class HistoricalSyncOrchestrator
             {
                 Console.WriteLine($"[SYNC] FAILED for {m.Username} ({m.Id}): {ex.Message}");
                 Console.WriteLine($"[SYNC] Stack trace: {ex.StackTrace}");
-                _logger.LogError(ex, "[{GuildName}] Failed to create member data for {Username} ({UserId})", 
+                _logger.LogError(ex, "[{GuildName}] Failed to create member data for {Username} ({UserId})",
                     guild.Name, m.Username, m.Id);
                 throw;
             }
         }
-        
+
         // Process in batches to avoid memory issues
         const int batchSize = 100;
         for (int i = 0; i < memberData.Count; i += batchSize)
         {
             ct.ThrowIfCancellationRequested();
-            
+
             var batch = memberData.Skip(i).Take(batchSize);
             await _userSyncService.SyncGuildMemberBatchAsync(new Snowflake(guild.Id), batch, ct);
-            
+
             _logger.LogDebug("[{GuildName}] Synced members {Start}-{End} of {Total}",
                 guild.Name, i + 1, Math.Min(i + batchSize, memberData.Count), memberData.Count);
-            
+
             await Task.Delay(_syncOptions.RateLimitDelayMs, ct);
         }
     }
@@ -355,14 +355,14 @@ public class HistoricalSyncOrchestrator
             .OfType<SocketTextChannel>()
             .Where(c => c is not SocketThreadChannel) // Handle threads separately
             .ToList();
-        
-        _logger.LogInformation("[{GuildName}] Syncing messages for {ChannelCount} text channels", 
+
+        _logger.LogInformation("[{GuildName}] Syncing messages for {ChannelCount} text channels",
             guild.Name, textChannels.Count);
-        
+
         foreach (var channel in textChannels)
         {
             ct.ThrowIfCancellationRequested();
-            
+
             try
             {
                 await SyncChannelMessagesAsync(channel, ct);
@@ -373,7 +373,7 @@ public class HistoricalSyncOrchestrator
                     guild.Name, channel.Name);
             }
         }
-        
+
         // Also sync messages in cached threads
         try
         {
@@ -381,7 +381,7 @@ public class HistoricalSyncOrchestrator
             foreach (var thread in threads)
             {
                 ct.ThrowIfCancellationRequested();
-                
+
                 try
                 {
                     await SyncChannelMessagesAsync(thread, ct);
@@ -403,32 +403,32 @@ public class HistoricalSyncOrchestrator
     {
         var channelIdStr = channel.Id.ToString();
         var syncState = await GetOrCreateSyncState(EntityTypeChannel, channelIdStr, ct);
-        
+
         // Check if we should resume from last position
         var lastMessageId = syncState.LastMessageId;
-        
+
         _logger.LogInformation("Syncing messages for channel #{ChannelName} ({ChannelId}), last synced: {LastMessageId}",
             channel.Name, channel.Id, lastMessageId?.ToString() ?? "never");
-        
+
         syncState.StartSync();
         await _unitOfWork.SaveChangesAsync(ct);
-        
+
         int totalSynced = 0;
         int maxMessages = _syncOptions.MaxHistoricalMessages;
         int batchSize = _syncOptions.MessageBatchSize;
-        
+
         try
         {
             IMessage? lastMessage = null;
             bool hasMore = true;
-            
+
             while (hasMore && totalSynced < maxMessages)
             {
                 ct.ThrowIfCancellationRequested();
-                
+
                 // Fetch messages in batches, going backwards from the most recent (or from where we left off)
                 IEnumerable<IMessage> messages;
-                
+
                 if (lastMessage is null)
                 {
                     // First batch - get most recent messages
@@ -439,15 +439,15 @@ public class HistoricalSyncOrchestrator
                     // Subsequent batches - get messages before the last one
                     messages = await channel.GetMessagesAsync(lastMessage.Id, Direction.Before, batchSize).FlattenAsync();
                 }
-                
+
                 var messageList = messages.ToList();
-                
+
                 if (messageList.Count == 0)
                 {
                     hasMore = false;
                     break;
                 }
-                
+
                 // Check if we've reached previously synced messages
                 if (lastMessageId.HasValue)
                 {
@@ -460,10 +460,10 @@ public class HistoricalSyncOrchestrator
                         hasMore = false;
                     }
                 }
-                
+
                 if (messageList.Count == 0)
                     break;
-                
+
                 // Convert to our DTO format and sync
                 var messageDataList = new List<MessageData>();
                 foreach (var msg in messageList)
@@ -482,7 +482,7 @@ public class HistoricalSyncOrchestrator
                             msg.Author.CreatedAt.UtcDateTime,
                             null,
                             ct);
-                        
+
                         // Skip referenced message ID during initial sync to avoid FK violations
                         // (referenced messages may not exist yet)
                         var messageData = new MessageData(
@@ -508,7 +508,7 @@ public class HistoricalSyncOrchestrator
                                 a.Height,
                                 a.ContentType)),
                             null); // Skip embeds for now to reduce complexity
-                        
+
                         messageDataList.Add(messageData);
                     }
                     catch (Exception ex)
@@ -518,9 +518,9 @@ public class HistoricalSyncOrchestrator
                         throw;
                     }
                 }
-                
+
                 await _messageSyncService.SyncMessageBatchAsync(messageDataList, ct);
-                
+
                 // Sync reactions for each message
                 foreach (var msg in messageList)
                 {
@@ -529,22 +529,22 @@ public class HistoricalSyncOrchestrator
                         await SyncMessageReactionsAsync(msg, ct);
                     }
                 }
-                
+
                 totalSynced += messageList.Count;
                 lastMessage = messageList.Last();
-                
+
                 _logger.LogDebug("Synced {Count} messages for #{ChannelName}, total: {Total}",
                     messageList.Count, channel.Name, totalSynced);
-                
+
                 // Respect rate limits
                 await Task.Delay(_syncOptions.RateLimitDelayMs, ct);
             }
-            
+
             // Track the newest message we synced for resume capability
             var newestMessageId = await _messageSyncService.GetLastMessageIdAsync(new Snowflake(channel.Id), ct);
             syncState.CompleteSync(newestMessageId);
             await _unitOfWork.SaveChangesAsync(ct);
-            
+
             _logger.LogInformation("Completed syncing {Total} messages for #{ChannelName}",
                 totalSynced, channel.Name);
         }
@@ -559,7 +559,7 @@ public class HistoricalSyncOrchestrator
     private async Task SyncMessageReactionsAsync(IMessage message, CancellationToken ct)
     {
         var reactions = new List<ReactionData>();
-        
+
         foreach (var reaction in message.Reactions)
         {
             try
@@ -567,10 +567,10 @@ public class HistoricalSyncOrchestrator
                 // Fetch users who reacted (up to 100 - Discord's limit)
                 var users = await message.GetReactionUsersAsync(reaction.Key, 100).FlattenAsync();
                 var userIds = users.Select(u => u.Id.ToString()).ToList();
-                
+
                 var emoteKey = GetEmoteKey(reaction.Key);
                 reactions.Add(new ReactionData(emoteKey, reaction.Value.ReactionCount, userIds));
-                
+
                 await Task.Delay(_syncOptions.RateLimitDelayMs / 2, ct);
             }
             catch (Exception ex)
@@ -579,7 +579,7 @@ public class HistoricalSyncOrchestrator
                     reaction.Key.Name, message.Id);
             }
         }
-        
+
         if (reactions.Count > 0)
         {
             await _reactionSyncService.SyncReactionsAsync(new Snowflake(message.Id), reactions, ct);
@@ -589,26 +589,26 @@ public class HistoricalSyncOrchestrator
     private async Task<SyncState> GetOrCreateSyncState(string entityType, string entityId, CancellationToken ct)
     {
         var syncState = await _syncStateRepository.GetByEntityAsync(entityType, entityId, ct);
-        
+
         if (syncState is null)
         {
             syncState = new SyncState(entityType, entityId);
             await _syncStateRepository.AddAsync(syncState, ct);
             await _unitOfWork.SaveChangesAsync(ct);
         }
-        
+
         return syncState;
     }
 
     private async Task UpdateSyncState(string entityType, string entityId, SyncStatus status, string? errorMessage, CancellationToken ct)
     {
         var syncState = await GetOrCreateSyncState(entityType, entityId, ct);
-        
+
         if (status == SyncStatus.Failed)
             syncState.FailSync(errorMessage ?? "Unknown error");
         else if (status == SyncStatus.Completed)
             syncState.CompleteSync();
-        
+
         await _unitOfWork.SaveChangesAsync(ct);
     }
 

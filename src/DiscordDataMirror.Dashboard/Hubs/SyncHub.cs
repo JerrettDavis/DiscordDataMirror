@@ -22,7 +22,7 @@ public class SyncHub : Hub<ISyncHubClient>
     public async Task SubscribeToGuild(string guildId)
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, $"guild:{guildId}");
-        _logger.LogDebug("Client {ConnectionId} subscribed to guild {GuildId}", 
+        _logger.LogDebug("Client {ConnectionId} subscribed to guild {GuildId}",
             Context.ConnectionId, guildId);
     }
 
@@ -32,7 +32,7 @@ public class SyncHub : Hub<ISyncHubClient>
     public async Task UnsubscribeFromGuild(string guildId)
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"guild:{guildId}");
-        _logger.LogDebug("Client {ConnectionId} unsubscribed from guild {GuildId}", 
+        _logger.LogDebug("Client {ConnectionId} unsubscribed from guild {GuildId}",
             Context.ConnectionId, guildId);
     }
 
@@ -42,7 +42,7 @@ public class SyncHub : Hub<ISyncHubClient>
     public async Task SubscribeToChannel(string channelId)
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, $"channel:{channelId}");
-        _logger.LogDebug("Client {ConnectionId} subscribed to channel {ChannelId}", 
+        _logger.LogDebug("Client {ConnectionId} subscribed to channel {ChannelId}",
             Context.ConnectionId, channelId);
     }
 
@@ -52,7 +52,7 @@ public class SyncHub : Hub<ISyncHubClient>
     public async Task UnsubscribeFromChannel(string channelId)
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"channel:{channelId}");
-        _logger.LogDebug("Client {ConnectionId} unsubscribed from channel {ChannelId}", 
+        _logger.LogDebug("Client {ConnectionId} unsubscribed from channel {ChannelId}",
             Context.ConnectionId, channelId);
     }
 
@@ -100,7 +100,7 @@ public class SyncHub : Hub<ISyncHubClient>
     {
         var command = new SyncChannelCommand(guildId, channelId, backfillMessages, messageLimit);
         await Clients.Group("bot-commands").TriggerChannelSync(command);
-        _logger.LogInformation("Sync requested for channel {ChannelId} in guild {GuildId} by {ConnectionId}", 
+        _logger.LogInformation("Sync requested for channel {ChannelId} in guild {GuildId} by {ConnectionId}",
             channelId, guildId, Context.ConnectionId);
     }
 
@@ -116,7 +116,7 @@ public class SyncHub : Hub<ISyncHubClient>
     {
         if (exception != null)
         {
-            _logger.LogWarning(exception, "Client disconnected with error: {ConnectionId}", 
+            _logger.LogWarning(exception, "Client disconnected with error: {ConnectionId}",
                 Context.ConnectionId);
         }
         else
@@ -141,7 +141,7 @@ public interface ISyncHubClient
     Task SyncError(SyncErrorEvent evt);
     Task MemberUpdated(MemberUpdatedEvent evt);
     Task AttachmentDownloaded(AttachmentDownloadedEvent evt);
-    
+
     // Commands from Dashboard to Bot
     Task TriggerGuildSync(SyncGuildCommand command);
     Task TriggerChannelSync(SyncChannelCommand command);

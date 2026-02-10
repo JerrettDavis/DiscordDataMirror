@@ -20,24 +20,24 @@ public class UpsertUserCommandHandler : IRequestHandler<UpsertUserCommand, User>
 {
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
-    
+
     public UpsertUserCommandHandler(IUserRepository userRepository, IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
     }
-    
+
     public async Task<User> Handle(UpsertUserCommand request, CancellationToken cancellationToken)
     {
         var userId = new Snowflake(request.Id);
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
-        
+
         if (user is null)
         {
             user = new User(userId, request.Username, request.CreatedAt);
             await _userRepository.AddAsync(user, cancellationToken);
         }
-        
+
         user.Update(
             request.Username,
             request.Discriminator,
@@ -46,9 +46,9 @@ public class UpsertUserCommandHandler : IRequestHandler<UpsertUserCommand, User>
             request.IsBot,
             request.RawJson);
         user.MarkSeen();
-        
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        
+
         return user;
     }
 }

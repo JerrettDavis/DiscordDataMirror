@@ -7,7 +7,7 @@ public class PlaywrightFixture : IAsyncLifetime
 {
     private IPlaywright? _playwright;
     private IBrowser? _browser;
-    
+
     public IBrowser Browser => _browser ?? throw new InvalidOperationException("Browser not initialized");
     public IPlaywright Playwright => _playwright ?? throw new InvalidOperationException("Playwright not initialized");
 

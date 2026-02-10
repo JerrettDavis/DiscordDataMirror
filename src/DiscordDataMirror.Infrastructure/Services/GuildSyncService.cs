@@ -40,26 +40,26 @@ public class GuildSyncService : IGuildSyncService
         if (existingGuild is null)
         {
             _logger.LogInformation("Creating new guild: {GuildName} ({GuildId})", name, guildId);
-            
+
             var guild = new Guild(guildId, name, ownerId, createdAt);
             guild.Update(name, iconUrl, description, ownerId, rawJson);
             guild.MarkSynced();
-            
+
             await _guildRepository.AddAsync(guild, ct);
             await _unitOfWork.SaveChangesAsync(ct);
-            
+
             return guild;
         }
         else
         {
             _logger.LogDebug("Updating existing guild: {GuildName} ({GuildId})", name, guildId);
-            
+
             existingGuild.Update(name, iconUrl, description, ownerId, rawJson);
             existingGuild.MarkSynced();
-            
+
             await _guildRepository.UpdateAsync(existingGuild, ct);
             await _unitOfWork.SaveChangesAsync(ct);
-            
+
             return existingGuild;
         }
     }

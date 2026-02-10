@@ -16,7 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 // Add PostgreSQL DbContext via Aspire with pooled factory for Blazor Server
-builder.AddNpgsqlDbContext<DiscordMirrorDbContext>("discorddatamirror", 
+builder.AddNpgsqlDbContext<DiscordMirrorDbContext>("discorddatamirror",
     configureDbContextOptions: options => options.UseNpgsql());
 
 // Also register the factory for Blazor components

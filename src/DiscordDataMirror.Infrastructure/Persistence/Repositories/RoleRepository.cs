@@ -10,7 +10,7 @@ public class RoleRepository : GenericRepository<Role, Snowflake>, IRoleRepositor
     public RoleRepository(DiscordMirrorDbContext context) : base(context)
     {
     }
-    
+
     public async Task<IReadOnlyList<Role>> GetByGuildIdAsync(Snowflake guildId, CancellationToken ct = default)
         => await DbSet
             .Where(r => r.GuildId == guildId)

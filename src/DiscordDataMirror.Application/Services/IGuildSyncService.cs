@@ -20,12 +20,12 @@ public interface IGuildSyncService
         DateTime createdAt,
         string? rawJson = null,
         CancellationToken ct = default);
-    
+
     /// <summary>
     /// Performs a full sync of all guild data including channels, roles, and members.
     /// </summary>
     Task FullSyncGuildAsync(Snowflake guildId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Gets all guilds that need to be synced.
     /// </summary>

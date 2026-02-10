@@ -16,7 +16,7 @@ public interface IReactionSyncService
         string emoteKey,
         Snowflake userId,
         CancellationToken ct = default);
-    
+
     /// <summary>
     /// Removes a reaction from a message.
     /// </summary>
@@ -25,7 +25,7 @@ public interface IReactionSyncService
         string emoteKey,
         Snowflake userId,
         CancellationToken ct = default);
-    
+
     /// <summary>
     /// Syncs all reactions for a message.
     /// </summary>

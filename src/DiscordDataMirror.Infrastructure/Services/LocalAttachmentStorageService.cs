@@ -21,10 +21,10 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly AttachmentOptions _options;
     private readonly ILogger<LocalAttachmentStorageService> _logger;
-    
+
     private readonly SemaphoreSlim _downloadSemaphore;
     private readonly ConcurrentQueue<(Snowflake AttachmentId, Snowflake GuildId, Snowflake ChannelId)> _downloadQueue = new();
-    
+
     private const string HttpClientName = "DiscordCdn";
 
     public LocalAttachmentStorageService(
@@ -55,7 +55,7 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
         {
             return new AttachmentDownloadResult(true, attachment.LocalPath, attachment.ContentHash, null, null, true, "Already cached");
         }
-        
+
         // Check size limit
         if (_options.MaxFileSizeBytes > 0 && attachment.Size > _options.MaxFileSizeBytes)
         {
@@ -64,7 +64,7 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
             await _unitOfWork.SaveChangesAsync(ct);
             return new AttachmentDownloadResult(false, null, null, null, reason, true, reason);
         }
-        
+
         // Check content type restrictions
         if (!IsContentTypeAllowed(attachment.ContentType))
         {
@@ -73,7 +73,7 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
             await _unitOfWork.SaveChangesAsync(ct);
             return new AttachmentDownloadResult(false, null, null, null, reason, true, reason);
         }
-        
+
         // Check for deduplication by hash if enabled
         if (_options.DeduplicateByHash && !string.IsNullOrEmpty(attachment.ContentHash))
         {
@@ -86,7 +86,7 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
                 return new AttachmentDownloadResult(true, existing.LocalPath, existing.ContentHash, 0, null, true, "Deduplicated from existing file");
             }
         }
-        
+
         await _downloadSemaphore.WaitAsync(ct);
         try
         {
@@ -106,7 +106,7 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
     {
         attachment.SetDownloading();
         await _unitOfWork.SaveChangesAsync(ct);
-        
+
         try
         {
             // Create directory structure: attachments/{guildId}/{channelId}/{messageId}/
@@ -116,68 +116,68 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
                 guildId.Value,
                 channelId.Value,
                 messageId);
-            
+
             Directory.CreateDirectory(directory);
-            
+
             // Handle filename conflicts
             var filename = SanitizeFilename(attachment.Filename);
             var filePath = Path.Combine(directory, filename);
             filePath = GetUniqueFilePath(filePath);
-            
+
             // Download the file
             using var client = _httpClientFactory.CreateClient(HttpClientName);
             client.Timeout = TimeSpan.FromSeconds(_options.DownloadTimeoutSeconds);
-            
+
             _logger.LogDebug("Downloading attachment {AttachmentId} from {Url}", attachment.Id, attachment.Url);
-            
+
             using var response = await client.GetAsync(attachment.Url, HttpCompletionOption.ResponseHeadersRead, ct);
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 var errorMessage = $"HTTP {(int)response.StatusCode}: {response.ReasonPhrase}";
-                
+
                 // Handle CDN URL expiration
                 if (response.StatusCode == System.Net.HttpStatusCode.Forbidden ||
                     response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
                     errorMessage = $"CDN URL expired or unavailable: {response.StatusCode}";
                 }
-                
+
                 attachment.SetFailed(errorMessage);
                 await _unitOfWork.SaveChangesAsync(ct);
                 return new AttachmentDownloadResult(false, null, null, null, errorMessage);
             }
-            
+
             // Stream to disk with hash calculation
             long bytesDownloaded = 0;
             string? contentHash = null;
-            
+
             using (var contentStream = await response.Content.ReadAsStreamAsync(ct))
             using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true))
             using (var hashAlgorithm = SHA256.Create())
             {
                 var buffer = new byte[81920];
                 int bytesRead;
-                
+
                 while ((bytesRead = await contentStream.ReadAsync(buffer, ct)) > 0)
                 {
                     ct.ThrowIfCancellationRequested();
-                    
+
                     await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), ct);
                     hashAlgorithm.TransformBlock(buffer, 0, bytesRead, null, 0);
                     bytesDownloaded += bytesRead;
-                    
+
                     // Check if we've exceeded size limit during download
                     if (_options.MaxFileSizeBytes > 0 && bytesDownloaded > _options.MaxFileSizeBytes)
                     {
                         throw new InvalidOperationException($"Download exceeded size limit at {bytesDownloaded:N0} bytes");
                     }
                 }
-                
+
                 hashAlgorithm.TransformFinalBlock([], 0, 0);
                 contentHash = Convert.ToHexString(hashAlgorithm.Hash!).ToLowerInvariant();
             }
-            
+
             // Check for deduplication after download
             if (_options.DeduplicateByHash)
             {
@@ -188,20 +188,20 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
                     File.Delete(filePath);
                     attachment.SetCached(existing.LocalPath!, contentHash);
                     await _unitOfWork.SaveChangesAsync(ct);
-                    
-                    _logger.LogDebug("Deduplicated attachment {AttachmentId} to existing file {LocalPath}", 
+
+                    _logger.LogDebug("Deduplicated attachment {AttachmentId} to existing file {LocalPath}",
                         attachment.Id, existing.LocalPath);
-                    
+
                     return new AttachmentDownloadResult(true, existing.LocalPath, contentHash, bytesDownloaded, null, true, "Deduplicated after download");
                 }
             }
-            
+
             attachment.SetCached(filePath, contentHash);
             await _unitOfWork.SaveChangesAsync(ct);
-            
-            _logger.LogInformation("Downloaded attachment {AttachmentId}: {Filename} ({Bytes:N0} bytes)", 
+
+            _logger.LogInformation("Downloaded attachment {AttachmentId}: {Filename} ({Bytes:N0} bytes)",
                 attachment.Id, attachment.Filename, bytesDownloaded);
-            
+
             return new AttachmentDownloadResult(true, filePath, contentHash, bytesDownloaded, null);
         }
         catch (OperationCanceledException)
@@ -215,7 +215,7 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
             var errorMessage = $"Network error: {ex.Message}";
             attachment.SetFailed(errorMessage);
             await _unitOfWork.SaveChangesAsync(ct);
-            
+
             _logger.LogWarning(ex, "Failed to download attachment {AttachmentId}", attachment.Id);
             return new AttachmentDownloadResult(false, null, null, null, errorMessage);
         }
@@ -224,7 +224,7 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
             var errorMessage = ex.Message;
             attachment.SetFailed(errorMessage);
             await _unitOfWork.SaveChangesAsync(ct);
-            
+
             _logger.LogError(ex, "Unexpected error downloading attachment {AttachmentId}", attachment.Id);
             return new AttachmentDownloadResult(false, null, null, null, errorMessage);
         }
@@ -236,16 +236,16 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
     {
         var results = new List<AttachmentDownloadResult>();
         var tasks = new List<Task<AttachmentDownloadResult>>();
-        
+
         foreach (var (attachment, guildId, channelId) in attachments)
         {
             ct.ThrowIfCancellationRequested();
             tasks.Add(DownloadAsync(attachment, guildId, channelId, ct));
         }
-        
+
         var completedResults = await Task.WhenAll(tasks);
         results.AddRange(completedResults);
-        
+
         return results;
     }
 
@@ -264,11 +264,11 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
     {
         // First, load any queued items from the database
         var queuedAttachments = await _attachmentRepository.GetQueuedAsync(100, ct);
-        
+
         foreach (var attachment in queuedAttachments)
         {
             if (ct.IsCancellationRequested) break;
-            
+
             // Get channel info to find guild ID
             var channel = await _channelRepository.GetByIdAsync(attachment.MessageId, ct);
             if (channel == null)
@@ -276,7 +276,7 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
                 _logger.LogWarning("Cannot find channel for queued attachment {AttachmentId}", attachment.Id);
                 continue;
             }
-            
+
             // We need to get the message's channel info
             var message = attachment.Message;
             if (message?.Channel == null)
@@ -284,16 +284,16 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
                 _logger.LogWarning("Cannot find message/channel info for queued attachment {AttachmentId}", attachment.Id);
                 continue;
             }
-            
+
             await DownloadAsync(attachment, message.Channel.GuildId, message.ChannelId, ct);
         }
-        
+
         // Then process any in-memory queue items
         while (_downloadQueue.TryDequeue(out var item) && !ct.IsCancellationRequested)
         {
             var attachment = await _attachmentRepository.GetByIdAsync(item.AttachmentId, ct);
             if (attachment == null) continue;
-            
+
             await DownloadAsync(attachment, item.GuildId, item.ChannelId, ct);
         }
     }
@@ -327,17 +327,17 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
     {
         var attachment = await _attachmentRepository.GetByIdAsync(attachmentId, ct);
         if (attachment?.LocalPath == null) return false;
-        
+
         try
         {
             if (File.Exists(attachment.LocalPath))
             {
                 File.Delete(attachment.LocalPath);
             }
-            
+
             attachment.ResetCache();
             await _unitOfWork.SaveChangesAsync(ct);
-            
+
             _logger.LogInformation("Deleted cached attachment {AttachmentId}", attachmentId);
             return true;
         }
@@ -351,7 +351,7 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
     public async Task<AttachmentStorageStats> GetStorageStatsAsync(CancellationToken ct = default)
     {
         var dbStats = await _attachmentRepository.GetStorageStatisticsAsync(ct);
-        
+
         return new AttachmentStorageStats(
             dbStats.CachedCount,
             dbStats.CachedSizeBytes,
@@ -365,25 +365,25 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
         try
         {
             var storagePath = Path.GetFullPath(_options.StoragePath);
-            
+
             // Create directory if it doesn't exist
             if (!Directory.Exists(storagePath))
             {
                 Directory.CreateDirectory(storagePath);
             }
-            
+
             // Check if we can write to it
             var testFile = Path.Combine(storagePath, $".write-test-{Guid.NewGuid()}.tmp");
             File.WriteAllText(testFile, "test");
             File.Delete(testFile);
-            
+
             // Check available space (warning if < 1GB)
             var driveInfo = new DriveInfo(Path.GetPathRoot(storagePath) ?? storagePath);
             if (driveInfo.AvailableFreeSpace < 1024 * 1024 * 1024)
             {
                 return Task.FromResult<(bool, string?)>((true, $"Warning: Only {driveInfo.AvailableFreeSpace / (1024 * 1024):N0} MB free space available"));
             }
-            
+
             return Task.FromResult<(bool, string?)>((true, null));
         }
         catch (Exception ex)
@@ -395,7 +395,7 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
     private bool IsContentTypeAllowed(string? contentType)
     {
         if (string.IsNullOrEmpty(contentType)) return true;
-        
+
         // Check blocked types first
         if (_options.BlockedContentTypes.Length > 0)
         {
@@ -405,7 +405,7 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
                     return false;
             }
         }
-        
+
         // If allowed types specified, content type must match one
         if (_options.AllowedContentTypes.Length > 0)
         {
@@ -416,7 +416,7 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
             }
             return false;
         }
-        
+
         return true;
     }
 
@@ -424,25 +424,25 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
     {
         var invalidChars = Path.GetInvalidFileNameChars();
         var sanitized = new string(filename.Select(c => invalidChars.Contains(c) ? '_' : c).ToArray());
-        
+
         // Limit length
         if (sanitized.Length > 200)
         {
             var ext = Path.GetExtension(sanitized);
             sanitized = sanitized[..(200 - ext.Length)] + ext;
         }
-        
+
         return sanitized;
     }
 
     private static string GetUniqueFilePath(string filePath)
     {
         if (!File.Exists(filePath)) return filePath;
-        
+
         var directory = Path.GetDirectoryName(filePath)!;
         var filename = Path.GetFileNameWithoutExtension(filePath);
         var extension = Path.GetExtension(filePath);
-        
+
         var counter = 1;
         string newPath;
         do
@@ -450,7 +450,7 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
             newPath = Path.Combine(directory, $"{filename}_{counter}{extension}");
             counter++;
         } while (File.Exists(newPath) && counter < 1000);
-        
+
         return newPath;
     }
 }

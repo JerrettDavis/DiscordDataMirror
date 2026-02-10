@@ -25,12 +25,12 @@ public interface IMessageSyncService
         Snowflake? referencedMessageId,
         string? rawJson = null,
         CancellationToken ct = default);
-    
+
     /// <summary>
     /// Marks a message as deleted.
     /// </summary>
     Task DeleteMessageAsync(Snowflake messageId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Syncs attachments for a message.
     /// </summary>
@@ -38,7 +38,7 @@ public interface IMessageSyncService
         Snowflake messageId,
         IEnumerable<AttachmentData> attachments,
         CancellationToken ct = default);
-    
+
     /// <summary>
     /// Syncs embeds for a message.
     /// </summary>
@@ -46,12 +46,12 @@ public interface IMessageSyncService
         Snowflake messageId,
         IEnumerable<EmbedData> embeds,
         CancellationToken ct = default);
-    
+
     /// <summary>
     /// Gets the last synced message ID for a channel.
     /// </summary>
     Task<Snowflake?> GetLastMessageIdAsync(Snowflake channelId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Batch sync messages (for historical sync).
     /// </summary>

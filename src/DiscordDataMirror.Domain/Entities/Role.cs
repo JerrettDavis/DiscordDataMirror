@@ -17,19 +17,19 @@ public class Role : Entity<Snowflake>
     public bool IsMentionable { get; private set; }
     public bool IsManaged { get; private set; }
     public string? RawJson { get; private set; }
-    
+
     // Navigation
     public Guild? Guild { get; private set; }
-    
+
     private Role() { } // EF Core
-    
+
     public Role(Snowflake id, Snowflake guildId, string name)
     {
         Id = id;
         GuildId = guildId;
         Name = name;
     }
-    
+
     public void Update(string name, int color, int position, string? permissions,
         bool isHoisted, bool isMentionable, bool isManaged, string? rawJson = null)
     {
@@ -42,7 +42,7 @@ public class Role : Entity<Snowflake>
         IsManaged = isManaged;
         RawJson = rawJson;
     }
-    
+
     /// <summary>
     /// Converts the color int to a hex string (e.g., "#FF5733").
     /// </summary>

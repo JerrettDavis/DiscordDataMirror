@@ -46,26 +46,26 @@ public class ChannelSyncService : IChannelSyncService
         if (existingChannel is null)
         {
             _logger.LogDebug("Creating new channel: {ChannelName} ({ChannelId})", name, channelId);
-            
+
             var channel = new Channel(channelId, guildId, name, type, createdAt);
             channel.Update(name, type, topic, position, isNsfw, parentId, rawJson);
             channel.MarkSynced();
-            
+
             await _channelRepository.AddAsync(channel, ct);
             await _unitOfWork.SaveChangesAsync(ct);
-            
+
             return channel;
         }
         else
         {
             _logger.LogDebug("Updating existing channel: {ChannelName} ({ChannelId})", name, channelId);
-            
+
             existingChannel.Update(name, type, topic, position, isNsfw, parentId, rawJson);
             existingChannel.MarkSynced();
-            
+
             await _channelRepository.UpdateAsync(existingChannel, ct);
             await _unitOfWork.SaveChangesAsync(ct);
-            
+
             return existingChannel;
         }
     }
@@ -87,19 +87,19 @@ public class ChannelSyncService : IChannelSyncService
         if (existingThread is null)
         {
             _logger.LogDebug("Creating new thread: {ThreadId}", threadId);
-            
+
             var thread = new Domain.Entities.Thread(threadId, parentChannelId);
             thread.Update(ownerId, messageCount, memberCount, isArchived, isLocked, archiveTimestamp, autoArchiveDuration);
-            
+
             await _threadRepository.AddAsync(thread, ct);
             await _unitOfWork.SaveChangesAsync(ct);
-            
+
             return thread;
         }
         else
         {
             _logger.LogDebug("Updating existing thread: {ThreadId}", threadId);
-            
+
             existingThread.Update(
                 ownerId,
                 messageCount,
@@ -108,10 +108,10 @@ public class ChannelSyncService : IChannelSyncService
                 isLocked,
                 archiveTimestamp,
                 autoArchiveDuration);
-            
+
             await _threadRepository.UpdateAsync(existingThread, ct);
             await _unitOfWork.SaveChangesAsync(ct);
-            
+
             return existingThread;
         }
     }

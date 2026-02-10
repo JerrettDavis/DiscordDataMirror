@@ -51,23 +51,23 @@ public class Message : Entity<Snowflake>
     public bool IsTts { get; private set; }
     public Snowflake? ReferencedMessageId { get; private set; }
     public string? RawJson { get; private set; }
-    
+
     // Navigation
     public Channel? Channel { get; private set; }
     public User? Author { get; private set; }
     public Message? ReferencedMessage { get; private set; }
-    
+
     private readonly List<Attachment> _attachments = [];
     public IReadOnlyCollection<Attachment> Attachments => _attachments.AsReadOnly();
-    
+
     private readonly List<Embed> _embeds = [];
     public IReadOnlyCollection<Embed> Embeds => _embeds.AsReadOnly();
-    
+
     private readonly List<Reaction> _reactions = [];
     public IReadOnlyCollection<Reaction> Reactions => _reactions.AsReadOnly();
-    
+
     private Message() { } // EF Core
-    
+
     public Message(Snowflake id, Snowflake channelId, Snowflake authorId, DateTime timestamp)
     {
         Id = id;
@@ -75,7 +75,7 @@ public class Message : Entity<Snowflake>
         AuthorId = authorId;
         Timestamp = timestamp;
     }
-    
+
     public void Update(string? content, string? cleanContent, MessageType type, bool isPinned, bool isTts,
         DateTime? editedTimestamp, Snowflake? referencedMessageId, string? rawJson = null)
     {
@@ -88,22 +88,22 @@ public class Message : Entity<Snowflake>
         ReferencedMessageId = referencedMessageId;
         RawJson = rawJson;
     }
-    
+
     public void AddAttachment(Attachment attachment)
     {
         if (!_attachments.Any(a => a.Id == attachment.Id))
             _attachments.Add(attachment);
     }
-    
+
     public void AddEmbed(Embed embed) => _embeds.Add(embed);
-    
+
     public void AddReaction(Reaction reaction)
     {
         var existing = _reactions.FirstOrDefault(r => r.EmoteKey == reaction.EmoteKey);
         if (existing is null)
             _reactions.Add(reaction);
     }
-    
+
     public void ClearAttachments() => _attachments.Clear();
     public void ClearEmbeds() => _embeds.Clear();
     public void ClearReactions() => _reactions.Clear();

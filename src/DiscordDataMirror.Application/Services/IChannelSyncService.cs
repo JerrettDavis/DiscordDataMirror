@@ -23,7 +23,7 @@ public interface IChannelSyncService
         DateTime createdAt,
         string? rawJson = null,
         CancellationToken ct = default);
-    
+
     /// <summary>
     /// Syncs thread-specific data for a channel.
     /// </summary>
@@ -38,12 +38,12 @@ public interface IChannelSyncService
         DateTime? archiveTimestamp,
         int? autoArchiveDuration,
         CancellationToken ct = default);
-    
+
     /// <summary>
     /// Marks a channel as deleted (soft delete or removal).
     /// </summary>
     Task DeleteChannelAsync(Snowflake channelId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Gets all channels for a guild.
     /// </summary>

@@ -6,17 +6,17 @@ namespace DiscordDataMirror.Application.Configuration;
 public class DiscordOptions
 {
     public const string SectionName = "Discord";
-    
+
     /// <summary>
     /// Discord bot token.
     /// </summary>
     public string Token { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// Whether to sync guild data when the bot starts.
     /// </summary>
     public bool SyncOnStartup { get; set; } = true;
-    
+
     /// <summary>
     /// Path where attachments will be cached.
     /// </summary>
@@ -29,22 +29,22 @@ public class DiscordOptions
 public class SyncOptions
 {
     public const string SectionName = "Sync";
-    
+
     /// <summary>
     /// Number of messages to fetch per batch.
     /// </summary>
     public int MessageBatchSize { get; set; } = 100;
-    
+
     /// <summary>
     /// Maximum number of historical messages to sync per channel.
     /// </summary>
     public int MaxHistoricalMessages { get; set; } = 10000;
-    
+
     /// <summary>
     /// Interval in minutes for periodic sync operations.
     /// </summary>
     public int SyncIntervalMinutes { get; set; } = 60;
-    
+
     /// <summary>
     /// Delay in milliseconds between API requests to avoid rate limiting.
     /// </summary>

@@ -69,10 +69,10 @@ public class HttpSyncEventPublisher : ISyncEventPublisher
         try
         {
             var response = await _httpClient.PostAsJsonAsync(endpoint, evt, ct);
-            
+
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Failed to publish event to {Endpoint}: {StatusCode}", 
+                _logger.LogWarning("Failed to publish event to {Endpoint}: {StatusCode}",
                     endpoint, response.StatusCode);
             }
         }

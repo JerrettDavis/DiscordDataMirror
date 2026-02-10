@@ -51,24 +51,24 @@ public class MessageSyncService : IMessageSyncService
         if (existingMessage is null)
         {
             _logger.LogDebug("Creating new message: {MessageId}", messageId);
-            
+
             var message = new Message(messageId, channelId, authorId, timestamp);
             message.Update(content, cleanContent, type, isPinned, isTts, editedTimestamp, referencedMessageId, rawJson);
-            
+
             await _messageRepository.AddAsync(message, ct);
             await _unitOfWork.SaveChangesAsync(ct);
-            
+
             return message;
         }
         else
         {
             _logger.LogDebug("Updating existing message: {MessageId}", messageId);
-            
+
             existingMessage.Update(content, cleanContent, type, isPinned, isTts, editedTimestamp, referencedMessageId, rawJson);
-            
+
             await _messageRepository.UpdateAsync(existingMessage, ct);
             await _unitOfWork.SaveChangesAsync(ct);
-            
+
             return existingMessage;
         }
     }
@@ -90,16 +90,16 @@ public class MessageSyncService : IMessageSyncService
         CancellationToken ct = default)
     {
         _logger.LogDebug("Syncing attachments for message {MessageId}", messageId);
-        
+
         // Get existing attachments
         var existing = await _attachmentRepository.GetByMessageIdAsync(messageId, ct);
         var existingDict = existing.ToDictionary(a => a.Id);
         var incomingIds = new HashSet<Snowflake>();
-        
+
         foreach (var attachmentData in attachments)
         {
             incomingIds.Add(attachmentData.Id);
-            
+
             if (existingDict.TryGetValue(attachmentData.Id, out var existingAttachment))
             {
                 // Update existing
@@ -127,7 +127,7 @@ public class MessageSyncService : IMessageSyncService
                 await _attachmentRepository.AddAsync(attachment, ct);
             }
         }
-        
+
         // Remove attachments no longer present
         foreach (var existingAttachment in existing)
         {
@@ -136,7 +136,7 @@ public class MessageSyncService : IMessageSyncService
                 await _attachmentRepository.DeleteAsync(existingAttachment, ct);
             }
         }
-        
+
         await _unitOfWork.SaveChangesAsync(ct);
     }
 
@@ -146,10 +146,10 @@ public class MessageSyncService : IMessageSyncService
         CancellationToken ct = default)
     {
         _logger.LogDebug("Syncing embeds for message {MessageId}", messageId);
-        
+
         // Delete all existing embeds for this message (embeds are replaced entirely)
         await _embedRepository.DeleteByMessageIdAsync(messageId, ct);
-        
+
         // Add new embeds
         foreach (var embedData in embeds)
         {
@@ -164,7 +164,7 @@ public class MessageSyncService : IMessageSyncService
                 embedData.JsonData ?? "{}");
             await _embedRepository.AddAsync(embed, ct);
         }
-        
+
         await _unitOfWork.SaveChangesAsync(ct);
     }
 
@@ -177,11 +177,11 @@ public class MessageSyncService : IMessageSyncService
     {
         var messageList = messages.ToList();
         _logger.LogDebug("Batch syncing {Count} messages", messageList.Count);
-        
+
         foreach (var messageData in messageList)
         {
             ct.ThrowIfCancellationRequested();
-            
+
             // Sync the message
             await SyncMessageAsync(
                 messageData.Id,
@@ -197,20 +197,20 @@ public class MessageSyncService : IMessageSyncService
                 messageData.ReferencedMessageId,
                 messageData.RawJson,
                 ct);
-            
+
             // Sync attachments if any
             if (messageData.Attachments?.Any() == true)
             {
                 await SyncAttachmentsAsync(messageData.Id, messageData.Attachments, ct);
             }
-            
+
             // Sync embeds if any
             if (messageData.Embeds?.Any() == true)
             {
                 await SyncEmbedsAsync(messageData.Id, messageData.Embeds, ct);
             }
         }
-        
+
         _logger.LogDebug("Batch sync complete");
     }
 }

@@ -22,24 +22,24 @@ public class UpsertChannelCommandHandler : IRequestHandler<UpsertChannelCommand,
 {
     private readonly IChannelRepository _channelRepository;
     private readonly IUnitOfWork _unitOfWork;
-    
+
     public UpsertChannelCommandHandler(IChannelRepository channelRepository, IUnitOfWork unitOfWork)
     {
         _channelRepository = channelRepository;
         _unitOfWork = unitOfWork;
     }
-    
+
     public async Task<Channel> Handle(UpsertChannelCommand request, CancellationToken cancellationToken)
     {
         var channelId = new Snowflake(request.Id);
         var channel = await _channelRepository.GetByIdAsync(channelId, cancellationToken);
-        
+
         if (channel is null)
         {
             channel = new Channel(channelId, new Snowflake(request.GuildId), request.Name, request.Type, request.CreatedAt);
             await _channelRepository.AddAsync(channel, cancellationToken);
         }
-        
+
         channel.Update(
             request.Name,
             request.Type,
@@ -49,9 +49,9 @@ public class UpsertChannelCommandHandler : IRequestHandler<UpsertChannelCommand,
             string.IsNullOrWhiteSpace(request.ParentId) ? null : new Snowflake(request.ParentId),
             request.RawJson);
         channel.MarkSynced();
-        
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        
+
         return channel;
     }
 }

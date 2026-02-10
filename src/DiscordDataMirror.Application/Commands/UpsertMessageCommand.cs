@@ -24,24 +24,24 @@ public class UpsertMessageCommandHandler : IRequestHandler<UpsertMessageCommand,
 {
     private readonly IMessageRepository _messageRepository;
     private readonly IUnitOfWork _unitOfWork;
-    
+
     public UpsertMessageCommandHandler(IMessageRepository messageRepository, IUnitOfWork unitOfWork)
     {
         _messageRepository = messageRepository;
         _unitOfWork = unitOfWork;
     }
-    
+
     public async Task<Message> Handle(UpsertMessageCommand request, CancellationToken cancellationToken)
     {
         var messageId = new Snowflake(request.Id);
         var message = await _messageRepository.GetByIdAsync(messageId, cancellationToken);
-        
+
         if (message is null)
         {
             message = new Message(messageId, new Snowflake(request.ChannelId), new Snowflake(request.AuthorId), request.Timestamp);
             await _messageRepository.AddAsync(message, cancellationToken);
         }
-        
+
         message.Update(
             request.Content,
             request.CleanContent,
@@ -51,9 +51,9 @@ public class UpsertMessageCommandHandler : IRequestHandler<UpsertMessageCommand,
             request.EditedTimestamp,
             string.IsNullOrWhiteSpace(request.ReferencedMessageId) ? null : new Snowflake(request.ReferencedMessageId),
             request.RawJson);
-        
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        
+
         return message;
     }
 }

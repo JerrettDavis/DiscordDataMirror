@@ -16,23 +16,23 @@ public class User : Entity<Snowflake>
     public DateTime CreatedAt { get; private set; }
     public DateTime? LastSeenAt { get; private set; }
     public string? RawJson { get; private set; }
-    
+
     // Navigation
     private readonly List<GuildMember> _memberships = [];
     public IReadOnlyCollection<GuildMember> Memberships => _memberships.AsReadOnly();
-    
+
     private readonly List<Message> _messages = [];
     public IReadOnlyCollection<Message> Messages => _messages.AsReadOnly();
-    
+
     private User() { } // EF Core
-    
+
     public User(Snowflake id, string username, DateTime createdAt)
     {
         Id = id;
         Username = username;
         CreatedAt = createdAt;
     }
-    
+
     public void Update(string username, string? discriminator, string? globalName, string? avatarUrl, bool isBot, string? rawJson = null)
     {
         Username = username;
@@ -42,9 +42,9 @@ public class User : Entity<Snowflake>
         IsBot = isBot;
         RawJson = rawJson;
     }
-    
+
     public void MarkSeen() => LastSeenAt = DateTime.UtcNow;
-    
+
     /// <summary>
     /// Display name: GlobalName if set, otherwise Username.
     /// </summary>

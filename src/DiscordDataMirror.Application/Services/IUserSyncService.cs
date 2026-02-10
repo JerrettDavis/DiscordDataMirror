@@ -21,7 +21,7 @@ public interface IUserSyncService
         DateTime createdAt,
         string? rawJson = null,
         CancellationToken ct = default);
-    
+
     /// <summary>
     /// Syncs a user's guild membership.
     /// </summary>
@@ -34,17 +34,17 @@ public interface IUserSyncService
         IEnumerable<string> roleIds,
         string? rawJson = null,
         CancellationToken ct = default);
-    
+
     /// <summary>
     /// Marks a user as having left a guild.
     /// </summary>
     Task RemoveGuildMemberAsync(Snowflake userId, Snowflake guildId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Gets all members of a guild.
     /// </summary>
     Task<IReadOnlyList<GuildMember>> GetGuildMembersAsync(Snowflake guildId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Batch sync guild members (for historical sync).
     /// </summary>

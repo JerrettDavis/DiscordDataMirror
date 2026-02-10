@@ -12,12 +12,12 @@ public class Reaction : Entity<string> // Composite key: MessageId_EmoteKey
     public string EmoteKey { get; private set; } = string.Empty; // "emoji_name" or "custom:id:name"
     public int Count { get; private set; }
     public List<string> UserIds { get; private set; } = []; // Users who reacted
-    
+
     // Navigation
     public Message? Message { get; private set; }
-    
+
     private Reaction() { } // EF Core
-    
+
     public Reaction(Snowflake messageId, string emoteKey, int count)
     {
         MessageId = messageId;
@@ -25,13 +25,13 @@ public class Reaction : Entity<string> // Composite key: MessageId_EmoteKey
         Count = count;
         Id = $"{messageId}_{emoteKey}";
     }
-    
+
     public void Update(int count, List<string> userIds)
     {
         Count = count;
         UserIds = userIds;
     }
-    
+
     public void AddUser(string userId)
     {
         if (!UserIds.Contains(userId))
@@ -40,23 +40,23 @@ public class Reaction : Entity<string> // Composite key: MessageId_EmoteKey
             Count = UserIds.Count;
         }
     }
-    
+
     public void RemoveUser(string userId)
     {
         if (UserIds.Remove(userId))
             Count = UserIds.Count;
     }
-    
+
     /// <summary>
     /// Whether this is a custom emoji (vs Unicode).
     /// </summary>
     public bool IsCustom => EmoteKey.StartsWith("custom:");
-    
+
     /// <summary>
     /// For custom emotes, extracts the ID.
     /// </summary>
     public string? CustomEmoteId => IsCustom ? EmoteKey.Split(':')[1] : null;
-    
+
     /// <summary>
     /// Display name of the emote.
     /// </summary>

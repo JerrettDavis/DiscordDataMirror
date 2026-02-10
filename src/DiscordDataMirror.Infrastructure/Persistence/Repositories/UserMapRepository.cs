@@ -10,13 +10,13 @@ public class UserMapRepository : GenericRepository<UserMap, int>, IUserMapReposi
     public UserMapRepository(DiscordMirrorDbContext context) : base(context)
     {
     }
-    
+
     public async Task<IReadOnlyList<UserMap>> GetByCanonicalUserAsync(Snowflake canonicalUserId, CancellationToken ct = default)
         => await DbSet
             .Where(m => m.CanonicalUserId == canonicalUserId)
             .Include(m => m.MappedUser)
             .ToListAsync(ct);
-    
+
     public async Task<IReadOnlyList<UserMap>> GetSuggestionsAsync(decimal minConfidence = 0.5m, CancellationToken ct = default)
         => await DbSet
             .Where(m => m.Confidence >= minConfidence)

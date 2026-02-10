@@ -11,13 +11,13 @@ public class ThreadRepository : GenericRepository<Thread, Snowflake>, IThreadRep
     public ThreadRepository(DiscordMirrorDbContext context) : base(context)
     {
     }
-    
+
     public async Task<IReadOnlyList<Thread>> GetByParentChannelAsync(Snowflake parentChannelId, CancellationToken ct = default)
         => await DbSet
             .Where(t => t.ParentChannelId == parentChannelId)
             .Include(t => t.Channel)
             .ToListAsync(ct);
-    
+
     public async Task<IReadOnlyList<Thread>> GetArchivedAsync(Snowflake guildId, CancellationToken ct = default)
         => await DbSet
             .Where(t => t.IsArchived && t.Channel != null && t.Channel.GuildId == guildId)

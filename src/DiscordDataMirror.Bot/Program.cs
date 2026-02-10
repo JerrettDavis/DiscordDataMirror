@@ -84,7 +84,7 @@ public class DiscordBotWorker : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly DiscordOptions _discordOptions;
     private bool _historicalSyncComplete;
-    
+
     public DiscordBotWorker(
         ILogger<DiscordBotWorker> logger,
         DiscordClientService clientService,
@@ -98,24 +98,24 @@ public class DiscordBotWorker : BackgroundService
         _serviceProvider = serviceProvider;
         _discordOptions = discordOptions.Value;
     }
-    
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Discord bot worker starting...");
-        
+
         try
         {
             // Register event handlers before connecting
             _eventHandler.RegisterEventHandlers();
-            
+
             // Register Ready event to trigger historical sync
             _clientService.Client.Ready += OnClientReadyAsync;
-            
+
             // Start the Discord client
             await _clientService.StartAsync(stoppingToken);
-            
+
             _logger.LogInformation("Discord bot started successfully");
-            
+
             // Keep the service running
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -128,7 +128,7 @@ public class DiscordBotWorker : BackgroundService
                 {
                     _logger.LogWarning("Discord bot health check: Disconnected - client will auto-reconnect");
                 }
-                
+
                 await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
             }
         }
@@ -148,16 +148,16 @@ public class DiscordBotWorker : BackgroundService
             _logger.LogInformation("Discord bot worker stopped");
         }
     }
-    
+
     private async Task OnClientReadyAsync()
     {
         if (!_discordOptions.SyncOnStartup || _historicalSyncComplete)
             return;
-        
+
         _historicalSyncComplete = true; // Prevent running twice on reconnect
-        
+
         _logger.LogInformation("Discord client ready - starting historical sync...");
-        
+
         // Run historical sync in background to not block the Ready event
         _ = Task.Run(async () =>
         {
@@ -173,14 +173,14 @@ public class DiscordBotWorker : BackgroundService
                     await Task.Delay(1000);
                     waited += TimeSpan.FromSeconds(1);
                 }
-                
+
                 _logger.LogInformation("Starting historical sync with {GuildCount} guilds", client.Guilds.Count);
-                
+
                 // Create scope inside the task so it lives for the duration of the sync
                 using var scope = _serviceProvider.CreateScope();
                 var orchestrator = scope.ServiceProvider.GetRequiredService<HistoricalSyncOrchestrator>();
                 await orchestrator.SyncAllGuildsAsync();
-                
+
                 _logger.LogInformation("Historical sync completed successfully");
             }
             catch (Exception ex)
@@ -188,10 +188,10 @@ public class DiscordBotWorker : BackgroundService
                 _logger.LogError(ex, "Historical sync failed");
             }
         });
-        
+
         await Task.CompletedTask;
     }
-    
+
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Discord bot worker received stop signal");

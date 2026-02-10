@@ -22,24 +22,24 @@ public class UpsertThreadCommandHandler : IRequestHandler<UpsertThreadCommand, T
 {
     private readonly IThreadRepository _threadRepository;
     private readonly IUnitOfWork _unitOfWork;
-    
+
     public UpsertThreadCommandHandler(IThreadRepository threadRepository, IUnitOfWork unitOfWork)
     {
         _threadRepository = threadRepository;
         _unitOfWork = unitOfWork;
     }
-    
+
     public async Task<Thread> Handle(UpsertThreadCommand request, CancellationToken cancellationToken)
     {
         var threadId = new Snowflake(request.Id);
         var thread = await _threadRepository.GetByIdAsync(threadId, cancellationToken);
-        
+
         if (thread is null)
         {
             thread = new Thread(threadId, new Snowflake(request.ParentChannelId));
             await _threadRepository.AddAsync(thread, cancellationToken);
         }
-        
+
         thread.Update(
             string.IsNullOrWhiteSpace(request.OwnerId) ? null : new Snowflake(request.OwnerId),
             request.MessageCount,
@@ -48,9 +48,9 @@ public class UpsertThreadCommandHandler : IRequestHandler<UpsertThreadCommand, T
             request.IsLocked,
             request.ArchiveTimestamp,
             request.AutoArchiveDuration);
-        
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        
+
         return thread;
     }
 }

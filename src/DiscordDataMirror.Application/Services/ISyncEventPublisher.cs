@@ -11,42 +11,42 @@ public interface ISyncEventPublisher
     /// Publishes a guild synced event.
     /// </summary>
     Task PublishGuildSyncedAsync(GuildSyncedEvent evt, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Publishes a channel synced event.
     /// </summary>
     Task PublishChannelSyncedAsync(ChannelSyncedEvent evt, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Publishes a message received event.
     /// </summary>
     Task PublishMessageReceivedAsync(MessageReceivedEvent evt, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Publishes a message updated event.
     /// </summary>
     Task PublishMessageUpdatedAsync(MessageUpdatedEvent evt, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Publishes a message deleted event.
     /// </summary>
     Task PublishMessageDeletedAsync(MessageDeletedEvent evt, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Publishes a sync progress event.
     /// </summary>
     Task PublishSyncProgressAsync(SyncProgressEvent evt, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Publishes a sync error event.
     /// </summary>
     Task PublishSyncErrorAsync(SyncErrorEvent evt, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Publishes a member updated event.
     /// </summary>
     Task PublishMemberUpdatedAsync(MemberUpdatedEvent evt, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Publishes an attachment downloaded event.
     /// </summary>

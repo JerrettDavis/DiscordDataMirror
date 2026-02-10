@@ -18,17 +18,17 @@ public interface IAttachmentCleanupService
     /// Finds and removes orphaned attachment files (files on disk with no database reference).
     /// </summary>
     Task<CleanupResult> CleanupOrphanedFilesAsync(CancellationToken ct = default);
-    
+
     /// <summary>
     /// Finds database records pointing to missing files and resets their cache status.
     /// </summary>
     Task<CleanupResult> CleanupMissingFilesAsync(CancellationToken ct = default);
-    
+
     /// <summary>
     /// Runs all cleanup operations.
     /// </summary>
     Task<CleanupResult> RunFullCleanupAsync(CancellationToken ct = default);
-    
+
     /// <summary>
     /// Gets cleanup statistics without performing any deletions.
     /// </summary>

@@ -18,11 +18,11 @@ public class DiscordMirrorDbContext : DbContext, IUnitOfWork
     public DbSet<Domain.Entities.Thread> Threads => Set<Domain.Entities.Thread>();
     public DbSet<SyncState> SyncStates => Set<SyncState>();
     public DbSet<UserMap> UserMaps => Set<UserMap>();
-    
+
     public DiscordMirrorDbContext(DbContextOptions<DiscordMirrorDbContext> options) : base(options)
     {
     }
-    
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(DiscordMirrorDbContext).Assembly);

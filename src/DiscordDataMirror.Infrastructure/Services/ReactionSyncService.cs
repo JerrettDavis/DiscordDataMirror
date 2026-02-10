@@ -36,20 +36,20 @@ public class ReactionSyncService : IReactionSyncService
         if (existingReaction is null)
         {
             _logger.LogDebug("Creating new reaction: {EmoteKey} on {MessageId}", emoteKey, messageId);
-            
+
             var reaction = new Reaction(messageId, emoteKey, 1);
             reaction.AddUser(userId.ToString());
-            
+
             await _reactionRepository.AddAsync(reaction, ct);
         }
         else
         {
             _logger.LogDebug("Adding user to reaction: {EmoteKey} on {MessageId}", emoteKey, messageId);
-            
+
             existingReaction.AddUser(userId.ToString());
             await _reactionRepository.UpdateAsync(existingReaction, ct);
         }
-        
+
         await _unitOfWork.SaveChangesAsync(ct);
     }
 
@@ -64,9 +64,9 @@ public class ReactionSyncService : IReactionSyncService
         if (reaction is not null)
         {
             _logger.LogDebug("Removing user from reaction: {EmoteKey} on {MessageId}", emoteKey, messageId);
-            
+
             reaction.RemoveUser(userId.ToString());
-            
+
             if (reaction.Count == 0)
             {
                 await _reactionRepository.DeleteAsync(reaction, ct);
@@ -75,7 +75,7 @@ public class ReactionSyncService : IReactionSyncService
             {
                 await _reactionRepository.UpdateAsync(reaction, ct);
             }
-            
+
             await _unitOfWork.SaveChangesAsync(ct);
         }
     }
@@ -86,17 +86,17 @@ public class ReactionSyncService : IReactionSyncService
         CancellationToken ct = default)
     {
         _logger.LogDebug("Syncing reactions for message {MessageId}", messageId);
-        
+
         // Get existing reactions for this message
         var existingReactions = await _reactionRepository.GetByMessageIdAsync(messageId, ct);
         var existingDict = existingReactions.ToDictionary(r => r.EmoteKey);
         var incomingKeys = new HashSet<string>();
-        
+
         foreach (var reactionData in reactions)
         {
             ct.ThrowIfCancellationRequested();
             incomingKeys.Add(reactionData.EmoteKey);
-            
+
             if (existingDict.TryGetValue(reactionData.EmoteKey, out var existing))
             {
                 // Update existing
@@ -111,7 +111,7 @@ public class ReactionSyncService : IReactionSyncService
                 await _reactionRepository.AddAsync(reaction, ct);
             }
         }
-        
+
         // Remove reactions that no longer exist
         foreach (var existing in existingReactions)
         {
@@ -120,7 +120,7 @@ public class ReactionSyncService : IReactionSyncService
                 await _reactionRepository.DeleteAsync(existing, ct);
             }
         }
-        
+
         await _unitOfWork.SaveChangesAsync(ct);
     }
 }

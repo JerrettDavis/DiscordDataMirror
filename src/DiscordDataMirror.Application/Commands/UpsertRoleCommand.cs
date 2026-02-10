@@ -22,24 +22,24 @@ public class UpsertRoleCommandHandler : IRequestHandler<UpsertRoleCommand, Role>
 {
     private readonly IRoleRepository _roleRepository;
     private readonly IUnitOfWork _unitOfWork;
-    
+
     public UpsertRoleCommandHandler(IRoleRepository roleRepository, IUnitOfWork unitOfWork)
     {
         _roleRepository = roleRepository;
         _unitOfWork = unitOfWork;
     }
-    
+
     public async Task<Role> Handle(UpsertRoleCommand request, CancellationToken cancellationToken)
     {
         var roleId = new Snowflake(request.Id);
         var role = await _roleRepository.GetByIdAsync(roleId, cancellationToken);
-        
+
         if (role is null)
         {
             role = new Role(roleId, new Snowflake(request.GuildId), request.Name);
             await _roleRepository.AddAsync(role, cancellationToken);
         }
-        
+
         role.Update(
             request.Name,
             request.Color,
@@ -49,9 +49,9 @@ public class UpsertRoleCommandHandler : IRequestHandler<UpsertRoleCommand, Role>
             request.IsMentionable,
             request.IsManaged,
             request.RawJson);
-        
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        
+
         return role;
     }
 }

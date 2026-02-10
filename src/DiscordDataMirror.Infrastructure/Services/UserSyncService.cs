@@ -44,26 +44,26 @@ public class UserSyncService : IUserSyncService
         if (existingUser is null)
         {
             _logger.LogDebug("Creating new user: {Username} ({UserId})", username, userId);
-            
+
             var user = new User(userId, username, createdAt);
             user.Update(username, discriminator, globalName, avatarUrl, isBot, rawJson);
             user.MarkSeen();
-            
+
             await _userRepository.AddAsync(user, ct);
             await _unitOfWork.SaveChangesAsync(ct);
-            
+
             return user;
         }
         else
         {
             _logger.LogDebug("Updating existing user: {Username} ({UserId})", username, userId);
-            
+
             existingUser.Update(username, discriminator, globalName, avatarUrl, isBot, rawJson);
             existingUser.MarkSeen();
-            
+
             await _userRepository.UpdateAsync(existingUser, ct);
             await _unitOfWork.SaveChangesAsync(ct);
-            
+
             return existingUser;
         }
     }
@@ -83,26 +83,26 @@ public class UserSyncService : IUserSyncService
         if (existingMember is null)
         {
             _logger.LogDebug("Creating new guild member: User {UserId} in Guild {GuildId}", userId, guildId);
-            
+
             var member = new GuildMember(userId, guildId);
             member.Update(nickname, joinedAt, isPending, roleIds.ToList(), rawJson);
             member.MarkSynced();
-            
+
             await _guildMemberRepository.AddAsync(member, ct);
             await _unitOfWork.SaveChangesAsync(ct);
-            
+
             return member;
         }
         else
         {
             _logger.LogDebug("Updating existing guild member: User {UserId} in Guild {GuildId}", userId, guildId);
-            
+
             existingMember.Update(nickname, joinedAt, isPending, roleIds.ToList(), rawJson);
             existingMember.MarkSynced();
-            
+
             await _guildMemberRepository.UpdateAsync(existingMember, ct);
             await _unitOfWork.SaveChangesAsync(ct);
-            
+
             return existingMember;
         }
     }
@@ -126,11 +126,11 @@ public class UserSyncService : IUserSyncService
     public async Task SyncGuildMemberBatchAsync(Snowflake guildId, IEnumerable<GuildMemberData> members, CancellationToken ct = default)
     {
         _logger.LogInformation("Batch syncing members for guild {GuildId}", guildId);
-        
+
         foreach (var memberData in members)
         {
             ct.ThrowIfCancellationRequested();
-            
+
             // First ensure user exists
             await SyncUserAsync(
                 memberData.UserId,
@@ -142,7 +142,7 @@ public class UserSyncService : IUserSyncService
                 memberData.UserCreatedAt,
                 null,
                 ct);
-            
+
             // Then sync guild membership
             await SyncGuildMemberAsync(
                 memberData.UserId,
@@ -154,7 +154,7 @@ public class UserSyncService : IUserSyncService
                 memberData.RawJson,
                 ct);
         }
-        
+
         _logger.LogInformation("Batch sync complete for guild {GuildId}", guildId);
     }
 }

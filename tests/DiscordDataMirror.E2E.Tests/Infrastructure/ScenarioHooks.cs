@@ -17,7 +17,7 @@ public class ScenarioHooks(ScenarioContext scenarioContext)
             IgnoreHTTPSErrors = true
         });
         var page = await context.NewPageAsync();
-        
+
         scenarioContext[BrowserContextKey] = context;
         scenarioContext[PageKey] = page;
     }
@@ -34,9 +34,9 @@ public class ScenarioHooks(ScenarioContext scenarioContext)
 
 public static class ScenarioContextExtensions
 {
-    public static IPage GetPage(this ScenarioContext context) 
+    public static IPage GetPage(this ScenarioContext context)
         => context.Get<IPage>("Page");
-    
+
     public static string GetDashboardUrl(this ScenarioContext context)
         => TestHooks.AspireFixture.DashboardUrl;
 }

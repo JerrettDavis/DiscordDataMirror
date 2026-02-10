@@ -22,7 +22,7 @@ public class DiscordEventHandler
     private readonly DiscordClientService _clientService;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<DiscordEventHandler> _logger;
-    
+
     public DiscordEventHandler(
         DiscordClientService clientService,
         IServiceProvider serviceProvider,
@@ -46,59 +46,59 @@ public class DiscordEventHandler
             _logger.LogWarning(ex, "Failed to publish event");
         }
     }
-    
+
     public void RegisterEventHandlers()
     {
         var client = _clientService.Client;
-        
+
         // Guild events
         client.GuildAvailable += OnGuildAvailableAsync;
         client.GuildUpdated += OnGuildUpdatedAsync;
-        
+
         // Channel events
         client.ChannelCreated += OnChannelCreatedAsync;
         client.ChannelUpdated += OnChannelUpdatedAsync;
         client.ChannelDestroyed += OnChannelDeletedAsync;
-        
+
         // Role events
         client.RoleCreated += OnRoleCreatedAsync;
         client.RoleUpdated += OnRoleUpdatedAsync;
         client.RoleDeleted += OnRoleDeletedAsync;
-        
+
         // User/Member events
         client.UserJoined += OnUserJoinedAsync;
         client.UserLeft += OnUserLeftAsync;
         client.GuildMemberUpdated += OnGuildMemberUpdatedAsync;
         client.UserUpdated += OnUserUpdatedAsync;
-        
+
         // Message events
         client.MessageReceived += OnMessageReceivedAsync;
         client.MessageUpdated += OnMessageUpdatedAsync;
         client.MessageDeleted += OnMessageDeletedAsync;
-        
+
         // Reaction events
         client.ReactionAdded += OnReactionAddedAsync;
         client.ReactionRemoved += OnReactionRemovedAsync;
-        
+
         // Thread events
         client.ThreadCreated += OnThreadCreatedAsync;
         client.ThreadUpdated += OnThreadUpdatedAsync;
         client.ThreadDeleted += OnThreadDeletedAsync;
-        
+
         _logger.LogInformation("Discord event handlers registered");
     }
-    
+
     #region Guild Events
-    
+
     private async Task OnGuildAvailableAsync(SocketGuild guild)
     {
         _logger.LogInformation("Guild available: {GuildName} ({GuildId})", guild.Name, guild.Id);
-        
+
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            
+
             await mediator.Send(new UpsertGuildCommand(
                 guild.Id.ToString(),
                 guild.Name,
@@ -108,7 +108,7 @@ public class DiscordEventHandler
                 guild.CreatedAt.UtcDateTime,
                 null // Skip raw JSON for now
             ));
-            
+
             // Sync all channels - categories first, then children (skip threads, they're separate)
             var orderedChannels = guild.Channels
                 .Where(c => c is not SocketThreadChannel) // Threads handled separately
@@ -117,7 +117,7 @@ public class DiscordEventHandler
                 .ThenBy(c => c.Position)
                 .ToList();
 
-            _logger.LogInformation("Syncing {ChannelCount} channels for guild {GuildName}", 
+            _logger.LogInformation("Syncing {ChannelCount} channels for guild {GuildName}",
                 orderedChannels.Count, guild.Name);
 
             // First pass: sync all categories
@@ -135,7 +135,7 @@ public class DiscordEventHandler
                     _logger.LogError(ex, "Failed to sync category {ChannelName} ({ChannelId})", channel.Name, channel.Id);
                 }
             }
-            
+
             // Second pass: sync remaining channels (they can now reference parents)
             var nonCategories = orderedChannels.Where(c => c is not ICategoryChannel).ToList();
             _logger.LogInformation("Second pass: syncing {NonCategoryCount} non-category channels", nonCategories.Count);
@@ -151,16 +151,16 @@ public class DiscordEventHandler
                     _logger.LogError(ex, "Failed to sync channel {ChannelName} ({ChannelId})", channel.Name, channel.Id);
                 }
             }
-            
+
             // Sync all roles
             foreach (var role in guild.Roles)
             {
                 await SyncRoleAsync(mediator, role);
             }
-            
+
             _logger.LogInformation("Guild synced: {GuildName} - {ChannelCount} channels, {RoleCount} roles",
                 guild.Name, guild.Channels.Count, guild.Roles.Count);
-            
+
             // Publish real-time event
             await PublishEventAsync(p => p.PublishGuildSyncedAsync(new GuildSyncedEvent(
                 guild.Id.ToString(),
@@ -171,7 +171,7 @@ public class DiscordEventHandler
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing GuildAvailable for {GuildId}", guild.Id);
-            
+
             // Publish error event
             await PublishEventAsync(p => p.PublishSyncErrorAsync(new SyncErrorEvent(
                 guild.Id.ToString(),
@@ -183,16 +183,16 @@ public class DiscordEventHandler
             )));
         }
     }
-    
+
     private async Task OnGuildUpdatedAsync(SocketGuild before, SocketGuild after)
     {
         _logger.LogDebug("Guild updated: {GuildName} ({GuildId})", after.Name, after.Id);
-        
+
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            
+
             await mediator.Send(new UpsertGuildCommand(
                 after.Id.ToString(),
                 after.Name,
@@ -208,23 +208,23 @@ public class DiscordEventHandler
             _logger.LogError(ex, "Error processing GuildUpdated for {GuildId}", after.Id);
         }
     }
-    
+
     #endregion
-    
+
     #region Channel Events
-    
+
     private async Task OnChannelCreatedAsync(SocketChannel channel)
     {
         if (channel is not SocketGuildChannel guildChannel)
             return;
-        
+
         _logger.LogDebug("Channel created: {ChannelName} ({ChannelId})", guildChannel.Name, channel.Id);
-        
+
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            
+
             await SyncChannelAsync(mediator, guildChannel, guildChannel.Guild.Id);
         }
         catch (Exception ex)
@@ -232,19 +232,19 @@ public class DiscordEventHandler
             _logger.LogError(ex, "Error processing ChannelCreated for {ChannelId}", channel.Id);
         }
     }
-    
+
     private async Task OnChannelUpdatedAsync(SocketChannel before, SocketChannel after)
     {
         if (after is not SocketGuildChannel guildChannel)
             return;
-        
+
         _logger.LogDebug("Channel updated: {ChannelName} ({ChannelId})", guildChannel.Name, after.Id);
-        
+
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            
+
             await SyncChannelAsync(mediator, guildChannel, guildChannel.Guild.Id);
         }
         catch (Exception ex)
@@ -252,30 +252,30 @@ public class DiscordEventHandler
             _logger.LogError(ex, "Error processing ChannelUpdated for {ChannelId}", after.Id);
         }
     }
-    
+
     private async Task OnChannelDeletedAsync(SocketChannel channel)
     {
         _logger.LogDebug("Channel deleted: {ChannelId}", channel.Id);
-        
+
         // Note: We don't actually delete - we could mark it or just log
         // For now, just log the deletion
         _logger.LogInformation("Channel {ChannelId} was deleted", channel.Id);
         await Task.CompletedTask;
     }
-    
+
     #endregion
-    
+
     #region Role Events
-    
+
     private async Task OnRoleCreatedAsync(SocketRole role)
     {
         _logger.LogDebug("Role created: {RoleName} ({RoleId})", role.Name, role.Id);
-        
+
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            
+
             await SyncRoleAsync(mediator, role);
         }
         catch (Exception ex)
@@ -283,16 +283,16 @@ public class DiscordEventHandler
             _logger.LogError(ex, "Error processing RoleCreated for {RoleId}", role.Id);
         }
     }
-    
+
     private async Task OnRoleUpdatedAsync(SocketRole before, SocketRole after)
     {
         _logger.LogDebug("Role updated: {RoleName} ({RoleId})", after.Name, after.Id);
-        
+
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            
+
             await SyncRoleAsync(mediator, after);
         }
         catch (Exception ex)
@@ -300,32 +300,32 @@ public class DiscordEventHandler
             _logger.LogError(ex, "Error processing RoleUpdated for {RoleId}", after.Id);
         }
     }
-    
+
     private async Task OnRoleDeletedAsync(SocketRole role)
     {
         _logger.LogDebug("Role deleted: {RoleName} ({RoleId})", role.Name, role.Id);
-        
+
         // Just log for now - could implement soft delete
         _logger.LogInformation("Role {RoleId} was deleted", role.Id);
         await Task.CompletedTask;
     }
-    
+
     #endregion
-    
+
     #region User/Member Events
-    
+
     private async Task OnUserJoinedAsync(SocketGuildUser user)
     {
         _logger.LogDebug("User joined: {Username} ({UserId}) in {GuildId}", user.Username, user.Id, user.Guild.Id);
-        
+
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            
+
             // Sync user first
             await SyncUserAsync(mediator, user);
-            
+
             // Then sync guild membership
             await mediator.Send(new UpsertGuildMemberCommand(
                 user.Id.ToString(),
@@ -336,7 +336,7 @@ public class DiscordEventHandler
                 user.Roles.Select(r => r.Id.ToString()).ToList(),
                 null
             ));
-            
+
             // Publish real-time event
             await PublishEventAsync(p => p.PublishMemberUpdatedAsync(new MemberUpdatedEvent(
                 user.Guild.Id.ToString(),
@@ -351,25 +351,25 @@ public class DiscordEventHandler
             _logger.LogError(ex, "Error processing UserJoined for {UserId}", user.Id);
         }
     }
-    
+
     private async Task OnUserLeftAsync(SocketGuild guild, SocketUser user)
     {
         _logger.LogDebug("User left: {Username} ({UserId}) from {GuildId}", user.Username, user.Id, guild.Id);
-        
+
         // Just log for now - could implement soft delete of membership
         _logger.LogInformation("User {UserId} left guild {GuildId}", user.Id, guild.Id);
         await Task.CompletedTask;
     }
-    
+
     private async Task OnGuildMemberUpdatedAsync(Cacheable<SocketGuildUser, ulong> before, SocketGuildUser after)
     {
         _logger.LogDebug("Guild member updated: {Username} ({UserId}) in {GuildId}", after.Username, after.Id, after.Guild.Id);
-        
+
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            
+
             await mediator.Send(new UpsertGuildMemberCommand(
                 after.Id.ToString(),
                 after.Guild.Id.ToString(),
@@ -385,16 +385,16 @@ public class DiscordEventHandler
             _logger.LogError(ex, "Error processing GuildMemberUpdated for {UserId}", after.Id);
         }
     }
-    
+
     private async Task OnUserUpdatedAsync(SocketUser before, SocketUser after)
     {
         _logger.LogDebug("User updated: {Username} ({UserId})", after.Username, after.Id);
-        
+
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            
+
             await SyncUserAsync(mediator, after);
         }
         catch (Exception ex)
@@ -402,19 +402,19 @@ public class DiscordEventHandler
             _logger.LogError(ex, "Error processing UserUpdated for {UserId}", after.Id);
         }
     }
-    
+
     #endregion
-    
+
     #region Message Events
-    
+
     private async Task OnMessageReceivedAsync(SocketMessage message)
     {
         if (message is not SocketUserMessage userMessage)
             return;
-        
+
         if (message.Channel is not SocketGuildChannel guildChannel)
             return; // Skip DMs
-        
+
         // Validate we have valid IDs
         if (message.Id == 0 || message.Channel.Id == 0 || message.Author?.Id == 0)
         {
@@ -422,23 +422,23 @@ public class DiscordEventHandler
                 message.Id, message.Channel.Id, message.Author?.Id);
             return;
         }
-        
+
         _logger.LogDebug("Message received: {MessageId} in {ChannelId}", message.Id, message.Channel.Id);
-        
+
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            
+
             // Ensure user exists
             await SyncUserAsync(mediator, message.Author!);
-            
+
             // Sync message - handle referenced message ID carefully
             var referencedMessageId = message.Reference?.MessageId;
-            string? refMsgIdStr = referencedMessageId.HasValue && referencedMessageId.Value.IsSpecified 
-                ? referencedMessageId.Value.Value.ToString() 
+            string? refMsgIdStr = referencedMessageId.HasValue && referencedMessageId.Value.IsSpecified
+                ? referencedMessageId.Value.Value.ToString()
                 : null;
-            
+
             await mediator.Send(new UpsertMessageCommand(
                 message.Id.ToString(),
                 message.Channel.Id.ToString(),
@@ -453,7 +453,7 @@ public class DiscordEventHandler
                 refMsgIdStr,
                 null
             ));
-            
+
             // Publish real-time event
             await PublishEventAsync(p => p.PublishMessageReceivedAsync(new MessageReceivedEvent(
                 guildChannel.Guild.Id.ToString(),
@@ -470,22 +470,22 @@ public class DiscordEventHandler
             _logger.LogError(ex, "Error processing MessageReceived for {MessageId}", message.Id);
         }
     }
-    
+
     private async Task OnMessageUpdatedAsync(Cacheable<IMessage, ulong> before, SocketMessage after, ISocketMessageChannel channel)
     {
         if (after is not SocketUserMessage userMessage)
             return;
-        
+
         if (channel is not SocketGuildChannel guildChannel)
             return;
-        
+
         _logger.LogDebug("Message updated: {MessageId} in {ChannelId}", after.Id, channel.Id);
-        
+
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            
+
             await mediator.Send(new UpsertMessageCommand(
                 after.Id.ToString(),
                 channel.Id.ToString(),
@@ -500,7 +500,7 @@ public class DiscordEventHandler
                 after.Reference?.MessageId.ToString(),
                 null
             ));
-            
+
             // Publish real-time event
             await PublishEventAsync(p => p.PublishMessageUpdatedAsync(new MessageUpdatedEvent(
                 guildChannel.Guild.Id.ToString(),
@@ -515,25 +515,25 @@ public class DiscordEventHandler
             _logger.LogError(ex, "Error processing MessageUpdated for {MessageId}", after.Id);
         }
     }
-    
+
     private async Task OnMessageDeletedAsync(Cacheable<IMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel)
     {
         _logger.LogDebug("Message deleted: {MessageId} in {ChannelId}", message.Id, channel.Id);
-        
+
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            
+
             await mediator.Send(new DeleteMessageCommand(message.Id.ToString()));
-            
+
             // Get guild ID from channel if available
             var guildId = "";
             if (channel.HasValue && channel.Value is SocketGuildChannel guildChannel)
             {
                 guildId = guildChannel.Guild.Id.ToString();
             }
-            
+
             // Publish real-time event
             await PublishEventAsync(p => p.PublishMessageDeletedAsync(new MessageDeletedEvent(
                 guildId,
@@ -547,11 +547,11 @@ public class DiscordEventHandler
             _logger.LogError(ex, "Error processing MessageDeleted for {MessageId}", message.Id);
         }
     }
-    
+
     #endregion
-    
+
     #region Reaction Events
-    
+
     private async Task OnReactionAddedAsync(
         Cacheable<IUserMessage, ulong> message,
         Cacheable<IMessageChannel, ulong> channel,
@@ -559,17 +559,17 @@ public class DiscordEventHandler
     {
         if (!reaction.User.IsSpecified)
             return;
-        
+
         _logger.LogDebug("Reaction added: {Emote} to {MessageId} by {UserId}",
             reaction.Emote.Name, message.Id, reaction.UserId);
-        
+
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            
+
             var emoteKey = GetEmoteKey(reaction.Emote);
-            
+
             await mediator.Send(new AddReactionCommand(
                 message.Id.ToString(),
                 emoteKey,
@@ -581,7 +581,7 @@ public class DiscordEventHandler
             _logger.LogError(ex, "Error processing ReactionAdded for {MessageId}", message.Id);
         }
     }
-    
+
     private async Task OnReactionRemovedAsync(
         Cacheable<IUserMessage, ulong> message,
         Cacheable<IMessageChannel, ulong> channel,
@@ -589,14 +589,14 @@ public class DiscordEventHandler
     {
         _logger.LogDebug("Reaction removed: {Emote} from {MessageId} by {UserId}",
             reaction.Emote.Name, message.Id, reaction.UserId);
-        
+
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            
+
             var emoteKey = GetEmoteKey(reaction.Emote);
-            
+
             await mediator.Send(new RemoveReactionCommand(
                 message.Id.ToString(),
                 emoteKey,
@@ -608,23 +608,23 @@ public class DiscordEventHandler
             _logger.LogError(ex, "Error processing ReactionRemoved for {MessageId}", message.Id);
         }
     }
-    
+
     #endregion
-    
+
     #region Thread Events
-    
+
     private async Task OnThreadCreatedAsync(SocketThreadChannel thread)
     {
         _logger.LogDebug("Thread created: {ThreadName} ({ThreadId})", thread.Name, thread.Id);
-        
+
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            
+
             // First sync as a channel
             await SyncChannelAsync(mediator, thread, thread.Guild.Id);
-            
+
             // Then sync thread-specific data
             var archiveTimestamp = thread.ArchiveTimestamp != default ? thread.ArchiveTimestamp.UtcDateTime : (DateTime?)null;
             await mediator.Send(new UpsertThreadCommand(
@@ -644,18 +644,18 @@ public class DiscordEventHandler
             _logger.LogError(ex, "Error processing ThreadCreated for {ThreadId}", thread.Id);
         }
     }
-    
+
     private async Task OnThreadUpdatedAsync(Cacheable<SocketThreadChannel, ulong> before, SocketThreadChannel after)
     {
         _logger.LogDebug("Thread updated: {ThreadName} ({ThreadId})", after.Name, after.Id);
-        
+
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            
+
             await SyncChannelAsync(mediator, after, after.Guild.Id);
-            
+
             var archiveTimestamp = after.ArchiveTimestamp != default ? after.ArchiveTimestamp.UtcDateTime : (DateTime?)null;
             await mediator.Send(new UpsertThreadCommand(
                 after.Id.ToString(),
@@ -674,19 +674,19 @@ public class DiscordEventHandler
             _logger.LogError(ex, "Error processing ThreadUpdated for {ThreadId}", after.Id);
         }
     }
-    
+
     private async Task OnThreadDeletedAsync(Cacheable<SocketThreadChannel, ulong> thread)
     {
         _logger.LogDebug("Thread deleted: {ThreadId}", thread.Id);
-        
+
         _logger.LogInformation("Thread {ThreadId} was deleted", thread.Id);
         await Task.CompletedTask;
     }
-    
+
     #endregion
-    
+
     #region Helper Methods
-    
+
     private async Task SyncChannelAsync(IMediator mediator, SocketGuildChannel channel, ulong guildId)
     {
         var channelType = MapChannelType(channel);
@@ -694,7 +694,7 @@ public class DiscordEventHandler
         var isNsfw = (channel as SocketTextChannel)?.IsNsfw ?? false;
         var parentId = (channel as SocketTextChannel)?.CategoryId?.ToString() ??
                        (channel as SocketVoiceChannel)?.CategoryId?.ToString();
-        
+
         await mediator.Send(new UpsertChannelCommand(
             channel.Id.ToString(),
             guildId.ToString(),
@@ -708,7 +708,7 @@ public class DiscordEventHandler
             null
         ));
     }
-    
+
     private async Task SyncRoleAsync(IMediator mediator, SocketRole role)
     {
         await mediator.Send(new UpsertRoleCommand(
@@ -724,7 +724,7 @@ public class DiscordEventHandler
             null
         ));
     }
-    
+
     private async Task SyncUserAsync(IMediator mediator, SocketUser user)
     {
         await mediator.Send(new UpsertUserCommand(
@@ -738,7 +738,7 @@ public class DiscordEventHandler
             null
         ));
     }
-    
+
     private static ChannelType MapChannelType(SocketGuildChannel channel)
     {
         // Use the underlying channel type from Discord directly to avoid inheritance issues
@@ -762,10 +762,10 @@ public class DiscordEventHandler
                 _ => ChannelType.Text
             };
         }
-        
+
         return ChannelType.Text;
     }
-    
+
     private static MessageType MapMessageType(Discord.MessageType discordType)
     {
         return discordType switch
@@ -794,7 +794,7 @@ public class DiscordEventHandler
             _ => MessageType.Default
         };
     }
-    
+
     private static string GetEmoteKey(IEmote emote)
     {
         return emote switch
@@ -804,6 +804,6 @@ public class DiscordEventHandler
             _ => emote.Name
         };
     }
-    
+
     #endregion
 }

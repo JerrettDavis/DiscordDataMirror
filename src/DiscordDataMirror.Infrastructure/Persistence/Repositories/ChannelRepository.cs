@@ -10,13 +10,13 @@ public class ChannelRepository : GenericRepository<Channel, Snowflake>, IChannel
     public ChannelRepository(DiscordMirrorDbContext context) : base(context)
     {
     }
-    
+
     public async Task<IReadOnlyList<Channel>> GetByGuildIdAsync(Snowflake guildId, CancellationToken ct = default)
         => await DbSet
             .Where(c => c.GuildId == guildId)
             .OrderBy(c => c.Position)
             .ToListAsync(ct);
-    
+
     public async Task<Channel?> GetWithMessagesAsync(Snowflake id, int skip = 0, int take = 50, CancellationToken ct = default)
         => await DbSet
             .Include(c => c.Messages

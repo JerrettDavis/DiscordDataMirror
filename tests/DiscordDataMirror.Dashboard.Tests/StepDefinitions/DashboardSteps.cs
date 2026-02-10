@@ -20,7 +20,7 @@ public class DashboardSteps
     {
         var page = await _driver.GetPageAsync();
         await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-        
+
         // Look for stats cards - MudBlazor components
         var statsCards = page.Locator(".mud-card, [class*='stats-card'], .stats-card");
         var count = await statsCards.CountAsync();
@@ -40,7 +40,7 @@ public class DashboardSteps
     {
         var page = await _driver.GetPageAsync();
         await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-        
+
         // Server cards are MudCards
         var cards = page.Locator(".mud-card");
         var count = await cards.CountAsync();
@@ -52,12 +52,12 @@ public class DashboardSteps
     {
         var page = await _driver.GetPageAsync();
         await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-        
+
         // Click the first server card (after stats cards)
         var serverCards = page.Locator(".mud-card").Filter(new() { HasText = "channels" });
         var firstServer = serverCards.First;
         await firstServer.ClickAsync();
-        
+
         // Wait for navigation
         await _driver.WaitForUrlContainsAsync("/guild/");
     }

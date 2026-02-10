@@ -23,12 +23,12 @@ public interface IRoleSyncService
         bool isManaged,
         string? rawJson = null,
         CancellationToken ct = default);
-    
+
     /// <summary>
     /// Marks a role as deleted.
     /// </summary>
     Task DeleteRoleAsync(Snowflake roleId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Gets all roles for a guild.
     /// </summary>

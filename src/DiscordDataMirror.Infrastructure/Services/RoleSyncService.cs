@@ -43,24 +43,24 @@ public class RoleSyncService : IRoleSyncService
         if (existingRole is null)
         {
             _logger.LogDebug("Creating new role: {RoleName} ({RoleId})", name, roleId);
-            
+
             var role = new Role(roleId, guildId, name);
             role.Update(name, color, position, permissions, isHoisted, isMentionable, isManaged, rawJson);
-            
+
             await _roleRepository.AddAsync(role, ct);
             await _unitOfWork.SaveChangesAsync(ct);
-            
+
             return role;
         }
         else
         {
             _logger.LogDebug("Updating existing role: {RoleName} ({RoleId})", name, roleId);
-            
+
             existingRole.Update(name, color, position, permissions, isHoisted, isMentionable, isManaged, rawJson);
-            
+
             await _roleRepository.UpdateAsync(existingRole, ct);
             await _unitOfWork.SaveChangesAsync(ct);
-            
+
             return existingRole;
         }
     }

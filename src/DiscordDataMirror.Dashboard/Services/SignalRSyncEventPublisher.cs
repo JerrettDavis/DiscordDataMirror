@@ -25,7 +25,7 @@ public class SignalRSyncEventPublisher : ISyncEventPublisher
     public async Task PublishGuildSyncedAsync(GuildSyncedEvent evt, CancellationToken ct = default)
     {
         _logger.LogDebug("Publishing GuildSynced for {GuildId}", evt.GuildId);
-        
+
         // Send to subscribers of this guild and sync status
         await Task.WhenAll(
             _hubContext.Clients.Group($"guild:{evt.GuildId}").GuildSynced(evt),
@@ -37,7 +37,7 @@ public class SignalRSyncEventPublisher : ISyncEventPublisher
     public async Task PublishChannelSyncedAsync(ChannelSyncedEvent evt, CancellationToken ct = default)
     {
         _logger.LogDebug("Publishing ChannelSynced for {ChannelId}", evt.ChannelId);
-        
+
         await Task.WhenAll(
             _hubContext.Clients.Group($"guild:{evt.GuildId}").ChannelSynced(evt),
             _hubContext.Clients.Group($"channel:{evt.ChannelId}").ChannelSynced(evt),
@@ -47,9 +47,9 @@ public class SignalRSyncEventPublisher : ISyncEventPublisher
 
     public async Task PublishMessageReceivedAsync(MessageReceivedEvent evt, CancellationToken ct = default)
     {
-        _logger.LogDebug("Publishing MessageReceived for {MessageId} in {ChannelId}", 
+        _logger.LogDebug("Publishing MessageReceived for {MessageId} in {ChannelId}",
             evt.MessageId, evt.ChannelId);
-        
+
         // Send to channel subscribers and guild subscribers
         await Task.WhenAll(
             _hubContext.Clients.Group($"channel:{evt.ChannelId}").MessageReceived(evt),
@@ -60,7 +60,7 @@ public class SignalRSyncEventPublisher : ISyncEventPublisher
     public async Task PublishMessageUpdatedAsync(MessageUpdatedEvent evt, CancellationToken ct = default)
     {
         _logger.LogDebug("Publishing MessageUpdated for {MessageId}", evt.MessageId);
-        
+
         await Task.WhenAll(
             _hubContext.Clients.Group($"channel:{evt.ChannelId}").MessageUpdated(evt),
             _hubContext.Clients.Group($"guild:{evt.GuildId}").MessageUpdated(evt)
@@ -70,7 +70,7 @@ public class SignalRSyncEventPublisher : ISyncEventPublisher
     public async Task PublishMessageDeletedAsync(MessageDeletedEvent evt, CancellationToken ct = default)
     {
         _logger.LogDebug("Publishing MessageDeleted for {MessageId}", evt.MessageId);
-        
+
         await Task.WhenAll(
             _hubContext.Clients.Group($"channel:{evt.ChannelId}").MessageDeleted(evt),
             _hubContext.Clients.Group($"guild:{evt.GuildId}").MessageDeleted(evt)
@@ -79,9 +79,9 @@ public class SignalRSyncEventPublisher : ISyncEventPublisher
 
     public async Task PublishSyncProgressAsync(SyncProgressEvent evt, CancellationToken ct = default)
     {
-        _logger.LogDebug("Publishing SyncProgress for {GuildId}: {EntityType} - {Status}", 
+        _logger.LogDebug("Publishing SyncProgress for {GuildId}: {EntityType} - {Status}",
             evt.GuildId, evt.EntityType, evt.Status);
-        
+
         await Task.WhenAll(
             _hubContext.Clients.Group($"guild:{evt.GuildId}").SyncProgress(evt),
             _hubContext.Clients.Group("sync-status").SyncProgress(evt)
@@ -90,9 +90,9 @@ public class SignalRSyncEventPublisher : ISyncEventPublisher
 
     public async Task PublishSyncErrorAsync(SyncErrorEvent evt, CancellationToken ct = default)
     {
-        _logger.LogWarning("Publishing SyncError for {GuildId}: {ErrorMessage}", 
+        _logger.LogWarning("Publishing SyncError for {GuildId}: {ErrorMessage}",
             evt.GuildId, evt.ErrorMessage);
-        
+
         await Task.WhenAll(
             _hubContext.Clients.Group($"guild:{evt.GuildId}").SyncError(evt),
             _hubContext.Clients.Group("sync-status").SyncError(evt),
@@ -102,17 +102,17 @@ public class SignalRSyncEventPublisher : ISyncEventPublisher
 
     public async Task PublishMemberUpdatedAsync(MemberUpdatedEvent evt, CancellationToken ct = default)
     {
-        _logger.LogDebug("Publishing MemberUpdated for {UserId} in {GuildId}", 
+        _logger.LogDebug("Publishing MemberUpdated for {UserId} in {GuildId}",
             evt.UserId, evt.GuildId);
-        
+
         await _hubContext.Clients.Group($"guild:{evt.GuildId}").MemberUpdated(evt);
     }
 
     public async Task PublishAttachmentDownloadedAsync(AttachmentDownloadedEvent evt, CancellationToken ct = default)
     {
-        _logger.LogDebug("Publishing AttachmentDownloaded for {AttachmentId}: {Success}", 
+        _logger.LogDebug("Publishing AttachmentDownloaded for {AttachmentId}: {Success}",
             evt.AttachmentId, evt.Success);
-        
+
         await Task.WhenAll(
             _hubContext.Clients.Group($"channel:{evt.ChannelId}").AttachmentDownloaded(evt),
             _hubContext.Clients.Group($"guild:{evt.GuildId}").AttachmentDownloaded(evt)

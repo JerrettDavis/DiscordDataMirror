@@ -35,16 +35,16 @@ public class Channel : Entity<Snowflake>
     public DateTime CreatedAt { get; private set; }
     public DateTime? LastSyncedAt { get; private set; }
     public string? RawJson { get; private set; }
-    
+
     // Navigation
     public Guild? Guild { get; private set; }
     public Channel? Parent { get; private set; }
-    
+
     private readonly List<Message> _messages = [];
     public IReadOnlyCollection<Message> Messages => _messages.AsReadOnly();
-    
+
     private Channel() { } // EF Core
-    
+
     public Channel(Snowflake id, Snowflake guildId, string name, ChannelType type, DateTime createdAt)
     {
         Id = id;
@@ -53,7 +53,7 @@ public class Channel : Entity<Snowflake>
         Type = type;
         CreatedAt = createdAt;
     }
-    
+
     public void Update(string name, ChannelType type, string? topic, int position, bool isNsfw, Snowflake? parentId, string? rawJson = null)
     {
         Name = name;
@@ -64,8 +64,8 @@ public class Channel : Entity<Snowflake>
         ParentId = parentId;
         RawJson = rawJson;
     }
-    
+
     public void MarkSynced() => LastSyncedAt = DateTime.UtcNow;
-    
+
     public bool IsThread => Type is ChannelType.NewsThread or ChannelType.PublicThread or ChannelType.PrivateThread;
 }

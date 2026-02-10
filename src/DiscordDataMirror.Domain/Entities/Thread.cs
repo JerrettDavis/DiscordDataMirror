@@ -16,21 +16,21 @@ public class Thread : Entity<Snowflake>
     public bool IsLocked { get; private set; }
     public DateTime? ArchiveTimestamp { get; private set; }
     public int? AutoArchiveDuration { get; private set; }
-    
+
     // Navigation (thread ID = channel ID)
     public Channel? Channel { get; private set; }
     public Channel? ParentChannel { get; private set; }
     public User? Owner { get; private set; }
-    
+
     private Thread() { } // EF Core
-    
+
     public Thread(Snowflake id, Snowflake parentChannelId)
     {
         Id = id;
         ParentChannelId = parentChannelId;
     }
-    
-    public void Update(Snowflake? ownerId, int messageCount, int memberCount, 
+
+    public void Update(Snowflake? ownerId, int messageCount, int memberCount,
         bool isArchived, bool isLocked, DateTime? archiveTimestamp, int? autoArchiveDuration)
     {
         OwnerId = ownerId;

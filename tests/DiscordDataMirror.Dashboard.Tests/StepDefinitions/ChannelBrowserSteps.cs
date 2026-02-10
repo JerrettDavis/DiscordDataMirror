@@ -24,11 +24,11 @@ public class ChannelBrowserSteps
         await _driver.NavigateToAsync("/");
         var page = await _driver.GetPageAsync();
         await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-        
+
         var serverCards = page.Locator(".mud-card").Filter(new() { HasText = "channels" });
         await serverCards.First.ClickAsync();
         await _driver.WaitForUrlContainsAsync("/guild/");
-        
+
         // Extract guild ID from URL
         var url = page.Url;
         var match = System.Text.RegularExpressions.Regex.Match(url, @"/guild/(\d+)");
@@ -43,7 +43,7 @@ public class ChannelBrowserSteps
     public async Task WhenINavigateToTheChannelBrowser()
     {
         var page = await _driver.GetPageAsync();
-        
+
         // Navigate to channels page
         if (_guildId != null)
         {
@@ -63,7 +63,7 @@ public class ChannelBrowserSteps
     {
         var page = await _driver.GetPageAsync();
         await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-        
+
         var categories = page.Locator(".channel-category, [class*='category']");
         var count = await categories.CountAsync();
         count.Should().BeGreaterThanOrEqualTo(0, "Categories may or may not exist");
@@ -73,7 +73,7 @@ public class ChannelBrowserSteps
     public async Task ThenIShouldSeeChannelsWithinCategories()
     {
         var page = await _driver.GetPageAsync();
-        
+
         var channels = page.Locator(".channel-item, [class*='channel']");
         var count = await channels.CountAsync();
         count.Should().BeGreaterThanOrEqualTo(1, "Expected at least one channel");
@@ -84,7 +84,7 @@ public class ChannelBrowserSteps
     public async Task WhenIClickOnAChannel()
     {
         var page = await _driver.GetPageAsync();
-        
+
         var channel = page.Locator(".channel-item, [class*='channel']").First;
         _selectedChannelName = await channel.TextContentAsync();
         await channel.ClickAsync();
@@ -95,7 +95,7 @@ public class ChannelBrowserSteps
     public async Task ThenIShouldSeeTheChannelDetailsPanel()
     {
         var page = await _driver.GetPageAsync();
-        
+
         // Channel details should show in the right panel
         var detailsPanel = page.Locator(".mud-paper").Filter(new() { HasText = "View Messages" });
         await Assertions.Expect(detailsPanel).ToBeVisibleAsync();
@@ -135,10 +135,10 @@ public class ChannelBrowserSteps
     public async Task WhenIClickOnADifferentChannel()
     {
         var page = await _driver.GetPageAsync();
-        
+
         var channels = page.Locator(".channel-item, [class*='channel']");
         var count = await channels.CountAsync();
-        
+
         if (count > 1)
         {
             var secondChannel = channels.Nth(1);
@@ -152,7 +152,7 @@ public class ChannelBrowserSteps
     public async Task ThenTheChannelDetailsShouldUpdateToTheNewChannel()
     {
         var page = await _driver.GetPageAsync();
-        
+
         if (_selectedChannelName != null)
         {
             var detailsPanel = page.Locator(".mud-paper");
@@ -165,7 +165,7 @@ public class ChannelBrowserSteps
     public async Task ThenEachChannelShouldDisplayAMessageCountBadge()
     {
         var page = await _driver.GetPageAsync();
-        
+
         // MudChip used for message counts
         var badges = page.Locator(".mud-chip, .channel-item .mud-chip");
         var count = await badges.CountAsync();

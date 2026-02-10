@@ -29,7 +29,7 @@ public interface IMessageRepository : IRepository<Message, Snowflake>
 {
     Task<IReadOnlyList<Message>> GetByChannelIdAsync(Snowflake channelId, int skip = 0, int take = 50, CancellationToken ct = default);
     Task<IReadOnlyList<Message>> GetByAuthorIdAsync(Snowflake authorId, int skip = 0, int take = 50, CancellationToken ct = default);
-    Task<IReadOnlyList<Message>> SearchAsync(string query, Snowflake? channelId = null, Snowflake? authorId = null, 
+    Task<IReadOnlyList<Message>> SearchAsync(string query, Snowflake? channelId = null, Snowflake? authorId = null,
         DateTime? from = null, DateTime? to = null, int skip = 0, int take = 50, CancellationToken ct = default);
     Task<Snowflake?> GetLastMessageIdAsync(Snowflake channelId, CancellationToken ct = default);
     Task<int> GetCountByChannelAsync(Snowflake channelId, CancellationToken ct = default);

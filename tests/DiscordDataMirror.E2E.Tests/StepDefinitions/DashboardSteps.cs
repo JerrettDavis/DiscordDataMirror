@@ -41,7 +41,7 @@ public class DashboardSteps(ScenarioContext scenarioContext)
             State = WaitForSelectorState.Visible,
             Timeout = 10000
         });
-        
+
         var content = await Page.ContentAsync();
         Assert.False(string.IsNullOrWhiteSpace(content), "Page content should not be empty");
     }
@@ -50,9 +50,9 @@ public class DashboardSteps(ScenarioContext scenarioContext)
     public async Task WhenIClickOnAGuildInTheSidebar()
     {
         // Wait for guild list to load
-        var guildLink = await Page.WaitForSelectorAsync("[data-testid='guild-link'], .guild-item, .mud-nav-link", 
+        var guildLink = await Page.WaitForSelectorAsync("[data-testid='guild-link'], .guild-item, .mud-nav-link",
             new PageWaitForSelectorOptions { Timeout = 10000 });
-        
+
         if (guildLink is not null)
         {
             await guildLink.ClickAsync();
@@ -66,8 +66,8 @@ public class DashboardSteps(ScenarioContext scenarioContext)
         // Check URL contains guild or the page has guild content
         var url = Page.Url;
         var content = await Page.ContentAsync();
-        
-        Assert.True(url.Contains("guild", StringComparison.OrdinalIgnoreCase) 
+
+        Assert.True(url.Contains("guild", StringComparison.OrdinalIgnoreCase)
             || content.Contains("guild", StringComparison.OrdinalIgnoreCase),
             "Should be on a guild page");
     }
@@ -83,7 +83,7 @@ public class DashboardSteps(ScenarioContext scenarioContext)
     public async Task ThenIShouldSeeTheSyncStatusInformation()
     {
         var content = await Page.ContentAsync();
-        Assert.True(content.Contains("sync", StringComparison.OrdinalIgnoreCase) 
+        Assert.True(content.Contains("sync", StringComparison.OrdinalIgnoreCase)
             || content.Contains("status", StringComparison.OrdinalIgnoreCase),
             "Page should contain sync status information");
     }
@@ -93,7 +93,7 @@ public class DashboardSteps(ScenarioContext scenarioContext)
     {
         // Look for connection status component
         var statusIndicator = await Page.QuerySelectorAsync("[data-testid='connection-status'], .connection-status, .status-indicator");
-        
+
         // If no specific indicator, at least verify the page loaded
         if (statusIndicator is null)
         {

@@ -10,33 +10,33 @@ public class AttachmentRepository : GenericRepository<Attachment, Snowflake>, IA
     public AttachmentRepository(DiscordMirrorDbContext context) : base(context)
     {
     }
-    
+
     public async Task<IReadOnlyList<Attachment>> GetByMessageIdAsync(Snowflake messageId, CancellationToken ct = default)
         => await DbSet
             .Where(a => a.MessageId == messageId)
             .ToListAsync(ct);
-    
+
     public async Task<IReadOnlyList<Attachment>> GetUncachedAsync(int take = 100, CancellationToken ct = default)
         => await DbSet
             .Where(a => !a.IsCached && a.DownloadStatus == AttachmentDownloadStatus.Pending)
             .OrderBy(a => a.Id)
             .Take(take)
             .ToListAsync(ct);
-    
+
     public async Task<IReadOnlyList<Attachment>> GetByStatusAsync(AttachmentDownloadStatus status, int take = 100, CancellationToken ct = default)
         => await DbSet
             .Where(a => a.DownloadStatus == status)
             .OrderBy(a => a.Id)
             .Take(take)
             .ToListAsync(ct);
-    
+
     public async Task<IReadOnlyList<Attachment>> GetQueuedAsync(int take = 100, CancellationToken ct = default)
         => await DbSet
             .Where(a => a.DownloadStatus == AttachmentDownloadStatus.Queued)
             .OrderBy(a => a.Id)
             .Take(take)
             .ToListAsync(ct);
-    
+
     public async Task<IReadOnlyList<Attachment>> GetFailedAsync(int maxAttempts = 3, int take = 100, CancellationToken ct = default)
         => await DbSet
             .Where(a => a.DownloadStatus == AttachmentDownloadStatus.Failed && a.DownloadAttempts < maxAttempts)
@@ -44,18 +44,18 @@ public class AttachmentRepository : GenericRepository<Attachment, Snowflake>, IA
             .ThenBy(a => a.Id)
             .Take(take)
             .ToListAsync(ct);
-    
+
     public async Task<Attachment?> GetByContentHashAsync(string contentHash, CancellationToken ct = default)
         => await DbSet
             .Where(a => a.ContentHash == contentHash && a.IsCached)
             .FirstOrDefaultAsync(ct);
-    
+
     public async Task<IReadOnlyList<string>> GetAllLocalPathsAsync(CancellationToken ct = default)
         => await DbSet
             .Where(a => a.LocalPath != null)
             .Select(a => a.LocalPath!)
             .ToListAsync(ct);
-    
+
     public async Task<AttachmentStorageStatistics> GetStorageStatisticsAsync(CancellationToken ct = default)
     {
         var stats = await DbSet
@@ -72,13 +72,13 @@ public class AttachmentRepository : GenericRepository<Attachment, Snowflake>, IA
                 SkippedCount = g.LongCount(a => a.DownloadStatus == AttachmentDownloadStatus.Skipped)
             })
             .FirstOrDefaultAsync(ct);
-        
+
         var uniqueHashCount = await DbSet
             .Where(a => a.ContentHash != null)
             .Select(a => a.ContentHash)
             .Distinct()
             .LongCountAsync(ct);
-        
+
         return new AttachmentStorageStatistics(
             stats?.TotalCount ?? 0,
             stats?.CachedCount ?? 0,

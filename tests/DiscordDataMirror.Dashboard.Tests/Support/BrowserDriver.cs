@@ -32,9 +32,9 @@ public class BrowserDriver : IAsyncDisposable
     {
         var page = await GetPageAsync();
         var url = path.StartsWith("http") ? path : $"{BaseUrl}{path}";
-        await page.GotoAsync(url, new PageGotoOptions 
-        { 
-            WaitUntil = WaitUntilState.NetworkIdle 
+        await page.GotoAsync(url, new PageGotoOptions
+        {
+            WaitUntil = WaitUntilState.NetworkIdle
         });
     }
 
