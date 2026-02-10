@@ -9,7 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="13.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.0-preview.2.25164.1" />
-    <PackageReference Include="MudBlazor" Version="8.4.0" />
+    <PackageReference Include="MudBlazor" Version="8.15.0" />
   </ItemGroup>
 
   <PropertyGroup>
