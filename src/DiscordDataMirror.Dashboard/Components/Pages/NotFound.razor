@@ -1,0 +1,16 @@
+@page "/not-found"
+
+<PageTitle>Not Found - Discord Data Mirror</PageTitle>
+
+<div class="empty-state" style="height: 100vh;">
+    <MudIcon Icon="@Icons.Material.Filled.SearchOff" 
+             Style="font-size: 80px; color: var(--discord-text-muted);" />
+    <div class="empty-state-title" style="font-size: 28px;">Page Not Found</div>
+    <div class="empty-state-description" style="margin-bottom: 24px;">
+        The page you're looking for doesn't exist or has been moved.
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/" Size="Size.Large">
+        <MudIcon Icon="@Icons.Material.Filled.Home" Class="mr-2" />
+        Go Home
+    </MudButton>
+</div>

@@ -1,0 +1,38 @@
+@page "/Error"
+@using System.Diagnostics
+
+<PageTitle>Error - Discord Data Mirror</PageTitle>
+
+<div class="empty-state" style="height: 100vh;">
+    <MudIcon Icon="@Icons.Material.Filled.Error" 
+             Style="font-size: 80px; color: var(--discord-red);" />
+    <div class="empty-state-title" style="font-size: 28px;">Something went wrong</div>
+    <div class="empty-state-description" style="margin-bottom: 24px;">
+        An unexpected error has occurred. Please try again later.
+    </div>
+    
+    @if (ShowRequestId)
+    {
+        <MudText Style="color: var(--discord-text-muted); font-family: monospace; margin-bottom: 16px;">
+            Request ID: @RequestId
+        </MudText>
+    }
+    
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/" Size="Size.Large">
+        <MudIcon Icon="@Icons.Material.Filled.Home" Class="mr-2" />
+        Go Home
+    </MudButton>
+</div>
+
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    private string? RequestId { get; set; }
+    private bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
+
+    protected override void OnInitialized()
+    {
+        RequestId = Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
+    }
+}

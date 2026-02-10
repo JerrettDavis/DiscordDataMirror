@@ -1,0 +1,38 @@
+@* Reaction badge component *@
+
+<MudTooltip Text="@GetTooltip()">
+    <div class="reaction">
+        @if (Reaction.IsCustom)
+        {
+            <img src="@GetCustomEmojiUrl()" alt="@Reaction.DisplayName" 
+                 style="width: 16px; height: 16px;" />
+        }
+        else
+        {
+            <span>@Reaction.DisplayName</span>
+        }
+        <span class="reaction-count">@Reaction.Count</span>
+    </div>
+</MudTooltip>
+
+@code {
+    [Parameter, EditorRequired]
+    public Reaction Reaction { get; set; } = default!;
+    
+    private string GetCustomEmojiUrl()
+    {
+        if (Reaction.CustomEmoteId != null)
+        {
+            // Discord CDN format for custom emojis
+            return $"https://cdn.discordapp.com/emojis/{Reaction.CustomEmoteId}.webp?size=32";
+        }
+        return "";
+    }
+    
+    private string GetTooltip()
+    {
+        var name = Reaction.DisplayName;
+        var count = Reaction.Count;
+        return count == 1 ? $":{name}:" : $":{name}: ({count} reactions)";
+    }
+}

@@ -1,0 +1,480 @@
+@page "/guild/{GuildId}/channel/{ChannelId}"
+@using DiscordDataMirror.Dashboard.Services
+@using DiscordDataMirror.Application.Events
+@inject IDbContextFactory<DiscordMirrorDbContext> DbContextFactory
+@inject NavigationManager Navigation
+@inject SyncHubConnection HubConnection
+@inject ISnackbar Snackbar
+@implements IAsyncDisposable
+@rendermode InteractiveServer
+
+<PageTitle>@(_channel?.Name ?? "Channel") - @(_guild?.Name ?? "Server")</PageTitle>
+
+<div class="channel-page-header">
+    @* Left side: channel info *@
+    <div class="channel-info">
+        <MudIcon Icon="@Icons.Material.Filled.Tag" Size="Size.Small" Class="channel-hash" />
+        <span class="channel-name">@(_channel?.Name ?? "Channel")</span>
+        @if (!string.IsNullOrEmpty(_channel?.Topic))
+        {
+            <span class="channel-divider"></span>
+            <span class="channel-topic" title="@_channel.Topic">
+                @(_channel.Topic.Length > 50 ? _channel.Topic[..50] + "..." : _channel.Topic)
+            </span>
+        }
+    </div>
+    
+    @* Right side: search (fixed position) *@
+    <div class="channel-search">
+        <MudTextField T="string" @bind-Value="_searchQuery" Placeholder="Search" 
+                      Variant="Variant.Outlined" Adornment="Adornment.Start" Margin="Margin.Dense"
+                      AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true"
+                      Style="width: 200px;" OnKeyDown="OnSearchKeyDown" />
+    </div>
+</div>
+
+@* Breadcrumbs below header *@
+<div class="breadcrumbs-bar">
+    <a href="/">Home</a>
+    <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
+    <a href="@($"/guild/{GuildId}")">@(_guild?.Name ?? "Server")</a>
+    <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
+    <a href="@($"/guild/{GuildId}/channels")">Channels</a>
+    <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
+    <span># @(_channel?.Name ?? "channel")</span>
+</div>
+
+<div style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
+    @* Messages area *@
+    <div style="flex: 1; overflow-y: auto; padding: 16px 0;" @ref="_messagesContainer">
+        @if (_loading)
+        {
+            <div style="display: flex; justify-content: center; padding: 24px;">
+                <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+            </div>
+        }
+        else if (_messages == null || !_messages.Any())
+        {
+            <div class="empty-state">
+                <MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" 
+                         Style="font-size: 64px; color: var(--discord-text-muted);" />
+                <div class="empty-state-title">No messages yet</div>
+                <div class="empty-state-description">
+                    This channel doesn't have any archived messages.
+                </div>
+            </div>
+        }
+        else
+        {
+            @* Load more button *@
+            @if (_hasMoreOlder)
+            {
+                <div style="display: flex; justify-content: center; padding: 16px;">
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="LoadOlderMessages"
+                               Disabled="_loadingMore">
+                        @if (_loadingMore)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        Load older messages
+                    </MudButton>
+                </div>
+            }
+            
+            @* Message groups *@
+            @foreach (var group in GroupMessages(_messages))
+            {
+                <div class="message-group">
+                    @for (int i = 0; i < group.Messages.Count; i++)
+                    {
+                        <MessageCard Message="group.Messages[i]" ShowHeader="i == 0" />
+                    }
+                </div>
+            }
+            
+            @* Load newer button (if searching/jumping) *@
+            @if (_hasMoreNewer)
+            {
+                <div style="display: flex; justify-content: center; padding: 16px;">
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="LoadNewerMessages"
+                               Disabled="_loadingMore">
+                        @if (_loadingMore)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        Load newer messages
+                    </MudButton>
+                </div>
+            }
+        }
+    </div>
+
+    @* Bottom bar with stats *@
+    <div style="padding: 8px 16px; border-top: 1px solid var(--discord-divider); display: flex; align-items: center; gap: 16px; background-color: var(--discord-bg-secondary);">
+        <MudText Style="color: var(--discord-text-muted); font-size: 12px;">
+            @_totalMessageCount.ToString("N0") messages in this channel
+        </MudText>
+        @if (_messages?.Any() == true)
+        {
+            <MudText Style="color: var(--discord-text-muted); font-size: 12px;">
+                Showing @_messages.First().Timestamp.ToLocalTime().ToString("MMM d, yyyy") - @_messages.Last().Timestamp.ToLocalTime().ToString("MMM d, yyyy")
+            </MudText>
+        }
+        <MudSpacer />
+        <MudButtonGroup Variant="Variant.Outlined" Size="Size.Small">
+            <MudButton OnClick="JumpToBeginning">Oldest</MudButton>
+            <MudButton OnClick="JumpToEnd">Newest</MudButton>
+        </MudButtonGroup>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string GuildId { get; set; } = "";
+    
+    [Parameter]
+    public string ChannelId { get; set; } = "";
+
+    private ElementReference _messagesContainer;
+    private Guild? _guild;
+    private Channel? _channel;
+    private List<Message>? _messages;
+    private bool _loading = true;
+    private bool _loadingMore = false;
+    private bool _hasMoreOlder = false;
+    private bool _hasMoreNewer = false;
+    private long _totalMessageCount = 0;
+    private string _searchQuery = "";
+    private const int PageSize = 50;
+
+    private string? _previousChannelId;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Unsubscribe from previous channel if changed
+        if (_previousChannelId != null && _previousChannelId != ChannelId)
+        {
+            await HubConnection.UnsubscribeFromChannelAsync(_previousChannelId);
+        }
+
+        await LoadData();
+        await SetupSignalR();
+        _previousChannelId = ChannelId;
+    }
+
+    private async Task SetupSignalR()
+    {
+        try
+        {
+            await HubConnection.StartAsync();
+            await HubConnection.SubscribeToChannelAsync(ChannelId);
+            
+            HubConnection.OnMessageReceived += OnMessageReceived;
+            HubConnection.OnMessageUpdated += OnMessageUpdated;
+            HubConnection.OnMessageDeleted += OnMessageDeleted;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to connect to real-time updates: {ex.Message}", Severity.Warning);
+        }
+    }
+
+    private async Task OnMessageReceived(MessageReceivedEvent evt)
+    {
+        // Only handle messages for this channel
+        if (evt.ChannelId != ChannelId) return;
+
+        // Fetch the full message from database
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        var messageId = new Snowflake(ulong.Parse(evt.MessageId));
+        var message = await dbContext.Messages
+            .Include(m => m.Author)
+            .Include(m => m.Attachments)
+            .Include(m => m.Embeds)
+            .Include(m => m.Reactions)
+            .FirstOrDefaultAsync(m => m.Id == messageId);
+
+        if (message != null && _messages != null)
+        {
+            // Only add if we're viewing the newest messages
+            if (!_hasMoreNewer)
+            {
+                _messages.Add(message);
+                _totalMessageCount++;
+                await InvokeAsync(StateHasChanged);
+                
+                // Show notification
+                var preview = evt.Content?.Length > 50 ? evt.Content[..50] + "..." : evt.Content;
+                Snackbar.Add($"New message from {evt.AuthorName}: {preview}", Severity.Info);
+            }
+            else
+            {
+                Snackbar.Add($"New message from {evt.AuthorName} - click 'Newest' to see", Severity.Info);
+            }
+        }
+    }
+
+    private async Task OnMessageUpdated(MessageUpdatedEvent evt)
+    {
+        if (evt.ChannelId != ChannelId) return;
+
+        var existingIndex = _messages?.FindIndex(m => m.Id.ToString() == evt.MessageId) ?? -1;
+        if (existingIndex >= 0 && _messages != null)
+        {
+            // Reload the updated message from the database
+            await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+            var messageId = new Snowflake(ulong.Parse(evt.MessageId));
+            var updatedMessage = await dbContext.Messages
+                .Include(m => m.Author)
+                .Include(m => m.Attachments)
+                .Include(m => m.Embeds)
+                .Include(m => m.Reactions)
+                .FirstOrDefaultAsync(m => m.Id == messageId);
+
+            if (updatedMessage != null)
+            {
+                _messages[existingIndex] = updatedMessage;
+                await InvokeAsync(StateHasChanged);
+            }
+            
+            Snackbar.Add("A message was edited", Severity.Info);
+        }
+    }
+
+    private async Task OnMessageDeleted(MessageDeletedEvent evt)
+    {
+        if (evt.ChannelId != ChannelId) return;
+
+        var existing = _messages?.FirstOrDefault(m => m.Id.ToString() == evt.MessageId);
+        if (existing != null)
+        {
+            _messages!.Remove(existing);
+            _totalMessageCount--;
+            await InvokeAsync(StateHasChanged);
+            
+            Snackbar.Add("A message was deleted", Severity.Warning);
+        }
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        
+        if (!ulong.TryParse(GuildId, out var guildIdParsed) || 
+            !ulong.TryParse(ChannelId, out var channelIdParsed)) return;
+        
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        var guildSnowflake = new Snowflake(guildIdParsed);
+        var channelSnowflake = new Snowflake(channelIdParsed);
+
+        _guild = await dbContext.Guilds
+            .FirstOrDefaultAsync(g => g.Id == guildSnowflake);
+
+        _channel = await dbContext.Channels
+            .FirstOrDefaultAsync(c => c.Id == channelSnowflake);
+
+        _totalMessageCount = await dbContext.Messages
+            .Where(m => m.ChannelId == channelSnowflake)
+            .LongCountAsync();
+
+        // Load latest messages
+        _messages = await dbContext.Messages
+            .Where(m => m.ChannelId == channelSnowflake)
+            .Include(m => m.Author)
+            .Include(m => m.Attachments)
+            .Include(m => m.Embeds)
+            .Include(m => m.Reactions)
+            .OrderByDescending(m => m.Timestamp)
+            .Take(PageSize)
+            .ToListAsync();
+
+        _messages = _messages.OrderBy(m => m.Timestamp).ToList();
+        _hasMoreOlder = _messages.Count == PageSize;
+        _hasMoreNewer = false;
+        
+        _loading = false;
+    }
+
+    private async Task LoadOlderMessages()
+    {
+        if (_messages == null || !_messages.Any() || _loadingMore) return;
+        
+        _loadingMore = true;
+        
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        var channelSnowflake = new Snowflake(ulong.Parse(ChannelId));
+        var oldestTimestamp = _messages.First().Timestamp;
+
+        var olderMessages = await dbContext.Messages
+            .Where(m => m.ChannelId == channelSnowflake && m.Timestamp < oldestTimestamp)
+            .Include(m => m.Author)
+            .Include(m => m.Attachments)
+            .Include(m => m.Embeds)
+            .Include(m => m.Reactions)
+            .OrderByDescending(m => m.Timestamp)
+            .Take(PageSize)
+            .ToListAsync();
+
+        if (olderMessages.Any())
+        {
+            _messages = olderMessages.OrderBy(m => m.Timestamp).Concat(_messages).ToList();
+            _hasMoreOlder = olderMessages.Count == PageSize;
+        }
+        else
+        {
+            _hasMoreOlder = false;
+        }
+        
+        _loadingMore = false;
+    }
+
+    private async Task LoadNewerMessages()
+    {
+        if (_messages == null || !_messages.Any() || _loadingMore) return;
+        
+        _loadingMore = true;
+        
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        var channelSnowflake = new Snowflake(ulong.Parse(ChannelId));
+        var newestTimestamp = _messages.Last().Timestamp;
+
+        var newerMessages = await dbContext.Messages
+            .Where(m => m.ChannelId == channelSnowflake && m.Timestamp > newestTimestamp)
+            .Include(m => m.Author)
+            .Include(m => m.Attachments)
+            .Include(m => m.Embeds)
+            .Include(m => m.Reactions)
+            .OrderBy(m => m.Timestamp)
+            .Take(PageSize)
+            .ToListAsync();
+
+        if (newerMessages.Any())
+        {
+            _messages = _messages.Concat(newerMessages).ToList();
+            _hasMoreNewer = newerMessages.Count == PageSize;
+        }
+        else
+        {
+            _hasMoreNewer = false;
+        }
+        
+        _loadingMore = false;
+    }
+
+    private async Task JumpToBeginning()
+    {
+        _loading = true;
+        
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        var channelSnowflake = new Snowflake(ulong.Parse(ChannelId));
+
+        _messages = await dbContext.Messages
+            .Where(m => m.ChannelId == channelSnowflake)
+            .Include(m => m.Author)
+            .Include(m => m.Attachments)
+            .Include(m => m.Embeds)
+            .Include(m => m.Reactions)
+            .OrderBy(m => m.Timestamp)
+            .Take(PageSize)
+            .ToListAsync();
+
+        _hasMoreOlder = false;
+        _hasMoreNewer = _messages.Count == PageSize && _totalMessageCount > PageSize;
+        
+        _loading = false;
+    }
+
+    private async Task JumpToEnd()
+    {
+        await LoadData();
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_searchQuery))
+        {
+            await SearchMessages();
+        }
+    }
+
+    private async Task SearchMessages()
+    {
+        if (string.IsNullOrWhiteSpace(_searchQuery)) return;
+        
+        _loading = true;
+        
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        var channelSnowflake = new Snowflake(ulong.Parse(ChannelId));
+
+        _messages = await dbContext.Messages
+            .Where(m => m.ChannelId == channelSnowflake && 
+                (m.Content != null && m.Content.Contains(_searchQuery)))
+            .Include(m => m.Author)
+            .Include(m => m.Attachments)
+            .Include(m => m.Embeds)
+            .Include(m => m.Reactions)
+            .OrderByDescending(m => m.Timestamp)
+            .Take(PageSize)
+            .ToListAsync();
+
+        _messages = _messages.OrderBy(m => m.Timestamp).ToList();
+        _hasMoreOlder = false;
+        _hasMoreNewer = false;
+        
+        _loading = false;
+    }
+
+    private IEnumerable<MessageGroup> GroupMessages(List<Message> messages)
+    {
+        var groups = new List<MessageGroup>();
+        MessageGroup? currentGroup = null;
+
+        foreach (var message in messages)
+        {
+            // Start new group if:
+            // - First message
+            // - Different author
+            // - More than 7 minutes since last message in group
+            bool shouldStartNewGroup = currentGroup == null ||
+                currentGroup.AuthorId != message.AuthorId.ToString() ||
+                (message.Timestamp - currentGroup.LastTimestamp).TotalMinutes > 7;
+
+            if (shouldStartNewGroup)
+            {
+                currentGroup = new MessageGroup
+                {
+                    AuthorId = message.AuthorId.ToString(),
+                    LastTimestamp = message.Timestamp,
+                    Messages = new List<Message> { message }
+                };
+                groups.Add(currentGroup);
+            }
+            else
+            {
+                currentGroup.Messages.Add(message);
+                currentGroup.LastTimestamp = message.Timestamp;
+            }
+        }
+
+        return groups;
+    }
+
+    private class MessageGroup
+    {
+        public string AuthorId { get; set; } = "";
+        public DateTime LastTimestamp { get; set; }
+        public List<Message> Messages { get; set; } = new();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        HubConnection.OnMessageReceived -= OnMessageReceived;
+        HubConnection.OnMessageUpdated -= OnMessageUpdated;
+        HubConnection.OnMessageDeleted -= OnMessageDeleted;
+        
+        if (_previousChannelId != null)
+        {
+            await HubConnection.UnsubscribeFromChannelAsync(_previousChannelId);
+        }
+    }
+}

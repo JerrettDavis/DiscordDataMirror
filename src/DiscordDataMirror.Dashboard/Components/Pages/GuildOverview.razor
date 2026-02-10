@@ -1,0 +1,360 @@
+@page "/guild/{GuildId}"
+@inject IDbContextFactory<DiscordMirrorDbContext> DbContextFactory
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>@(_guild?.Name ?? "Server") - Discord Data Mirror</PageTitle>
+
+@if (_guild == null)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else
+{
+    <div class="page-header">
+        <MudAvatar Size="Size.Large" Style="width: 48px; height: 48px;">
+            @if (!string.IsNullOrEmpty(_guild.IconUrl))
+            {
+                <MudImage Src="@_guild.IconUrl" Alt="@_guild.Name" />
+            }
+            else
+            {
+                @GetInitials(_guild.Name)
+            }
+        </MudAvatar>
+        <div>
+            <h1 class="page-title">@_guild.Name</h1>
+            @if (!string.IsNullOrEmpty(_guild.Description))
+            {
+                <p class="page-subtitle">@_guild.Description</p>
+            }
+        </div>
+    </div>
+
+    <div class="pa-6">
+        @* Stats overview *@
+        <MudGrid Spacing="3" Class="mb-6">
+            <MudItem xs="12" sm="6" md="3">
+                <StatsCard Icon="@Icons.Material.Filled.Tag" 
+                           Value="@_stats.ChannelCount.ToString("N0")" 
+                           Label="Channels" 
+                           IconClass="primary" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <StatsCard Icon="@Icons.Material.Filled.People" 
+                           Value="@_stats.MemberCount.ToString("N0")" 
+                           Label="Members" 
+                           IconClass="success" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <StatsCard Icon="@Icons.Material.Filled.Message" 
+                           Value="@FormatNumber(_stats.MessageCount)" 
+                           Label="Messages" 
+                           IconClass="warning" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <StatsCard Icon="@Icons.Material.Filled.Shield" 
+                           Value="@_stats.RoleCount.ToString("N0")" 
+                           Label="Roles" 
+                           IconClass="error" />
+            </MudItem>
+        </MudGrid>
+
+        <MudGrid Spacing="3">
+            @* Sync Status Card *@
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="0" Class="pa-4" Style="background-color: var(--discord-bg-secondary);">
+                    <MudText Typo="Typo.h6" Class="mb-3" Style="color: var(--discord-text-header);">
+                        Sync Status
+                    </MudText>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <MudText Style="color: var(--discord-text-muted);">Last Synced</MudText>
+                            <MudText Style="color: var(--discord-text-normal);">
+                                @(_guild.LastSyncedAt.HasValue ? FormatTimeAgo(_guild.LastSyncedAt.Value) : "Never")
+                            </MudText>
+                        </div>
+                        @if (_syncState != null)
+                        {
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <MudText Style="color: var(--discord-text-muted);">Status</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(_syncState.Status)" 
+                                         Variant="Variant.Filled">
+                                    @_syncState.Status
+                                </MudChip>
+                            </div>
+                            @if (!string.IsNullOrEmpty(_syncState.ErrorMessage))
+                            {
+                                <MudAlert Severity="Severity.Error" Dense="true">
+                                    @_syncState.ErrorMessage
+                                </MudAlert>
+                            }
+                        }
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <MudText Style="color: var(--discord-text-muted);">Created</MudText>
+                            <MudText Style="color: var(--discord-text-normal);">
+                                @_guild.CreatedAt.ToLocalTime().ToString("MMM d, yyyy")
+                            </MudText>
+                        </div>
+                    </div>
+                </MudPaper>
+            </MudItem>
+
+            @* Recent Channels *@
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="0" Class="pa-4" Style="background-color: var(--discord-bg-secondary);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <MudText Typo="Typo.h6" Style="color: var(--discord-text-header);">
+                            Channels
+                        </MudText>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                                   Href="@($"/guild/{GuildId}/channels")">
+                            View All
+                        </MudButton>
+                    </div>
+                    @if (_recentChannels?.Any() == true)
+                    {
+                        @foreach (var channel in _recentChannels.Take(5))
+                        {
+                            <div class="channel-item" @onclick="() => NavigateToChannel(channel.Id.ToString())">
+                                <MudIcon Icon="@GetChannelIcon(channel.Type)" Size="Size.Small" Class="channel-icon" />
+                                <span class="channel-name">@channel.Name</span>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <MudText Style="color: var(--discord-text-muted);">No channels found</MudText>
+                    }
+                </MudPaper>
+            </MudItem>
+
+            @* Top Members *@
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="0" Class="pa-4" Style="background-color: var(--discord-bg-secondary);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <MudText Typo="Typo.h6" Style="color: var(--discord-text-header);">
+                            Top Members
+                        </MudText>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                                   Href="@($"/guild/{GuildId}/members")">
+                            View All
+                        </MudButton>
+                    </div>
+                    @if (_topMembers?.Any() == true)
+                    {
+                        @foreach (var member in _topMembers)
+                        {
+                            <div class="member-item">
+                                <div class="member-avatar">
+                                    @if (!string.IsNullOrEmpty(member.User?.AvatarUrl))
+                                    {
+                                        <img src="@member.User.AvatarUrl" alt="" />
+                                    }
+                                    else
+                                    {
+                                        <span style="color: white; font-size: 12px;">
+                                            @GetInitials(member.User?.DisplayName ?? "?")
+                                        </span>
+                                    }
+                                </div>
+                                <div class="member-info">
+                                    <div class="member-name">
+                                        @(member.Nickname ?? member.User?.DisplayName ?? "Unknown")
+                                    </div>
+                                    <div class="member-status">
+                                        @FormatNumber(member.MessageCount) messages
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <MudText Style="color: var(--discord-text-muted);">No members found</MudText>
+                    }
+                </MudPaper>
+            </MudItem>
+
+            @* Roles *@
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="0" Class="pa-4" Style="background-color: var(--discord-bg-secondary);">
+                    <MudText Typo="Typo.h6" Class="mb-3" Style="color: var(--discord-text-header);">
+                        Roles
+                    </MudText>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        @if (_roles?.Any() == true)
+                        {
+                            @foreach (var role in _roles.OrderByDescending(r => r.Position).Take(15))
+                            {
+                                var color = role.Color > 0 ? $"#{role.Color:X6}" : "var(--discord-text-muted)";
+                                <MudChip T="string" Size="Size.Small" 
+                                         Style="@($"background-color: {color}20; color: {color}; border: 1px solid {color}40;")">
+                                    @role.Name
+                                </MudChip>
+                            }
+                            @if (_roles.Count > 15)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Default">
+                                    +@(_roles.Count - 15) more
+                                </MudChip>
+                            }
+                        }
+                        else
+                        {
+                            <MudText Style="color: var(--discord-text-muted);">No roles found</MudText>
+                        }
+                    </div>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string GuildId { get; set; } = "";
+
+    private Guild? _guild;
+    private SyncState? _syncState;
+    private List<Channel>? _recentChannels;
+    private List<Role>? _roles;
+    private List<MemberWithMessages>? _topMembers;
+    private GuildStats _stats = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        if (!ulong.TryParse(GuildId, out var guildIdParsed)) return;
+        
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        var snowflake = new Snowflake(guildIdParsed);
+
+        _guild = await dbContext.Guilds
+            .FirstOrDefaultAsync(g => g.Id == snowflake);
+
+        if (_guild == null) return;
+
+        _syncState = await dbContext.SyncStates
+            .FirstOrDefaultAsync(s => s.EntityType == "Guild" && s.EntityId == GuildId);
+
+        _recentChannels = await dbContext.Channels
+            .Where(c => c.GuildId == snowflake && c.Type == ChannelType.Text)
+            .OrderBy(c => c.Position)
+            .Take(5)
+            .ToListAsync();
+
+        _roles = await dbContext.Roles
+            .Where(r => r.GuildId == snowflake)
+            .OrderByDescending(r => r.Position)
+            .ToListAsync();
+
+        // Get channel IDs for this guild
+        var channelIds = await dbContext.Channels
+            .Where(c => c.GuildId == snowflake)
+            .Select(c => c.Id)
+            .ToListAsync();
+
+        _stats = new GuildStats
+        {
+            ChannelCount = await dbContext.Channels.CountAsync(c => c.GuildId == snowflake),
+            MemberCount = await dbContext.GuildMembers.CountAsync(m => m.GuildId == snowflake),
+            MessageCount = await dbContext.Messages.Where(m => channelIds.Contains(m.ChannelId)).LongCountAsync(),
+            RoleCount = _roles.Count
+        };
+
+        // Get top members by message count
+        var memberMessages = await dbContext.Messages
+            .Where(m => channelIds.Contains(m.ChannelId))
+            .GroupBy(m => m.AuthorId)
+            .Select(g => new { AuthorId = g.Key, Count = g.LongCount() })
+            .OrderByDescending(x => x.Count)
+            .Take(5)
+            .ToListAsync();
+
+        var topMemberIds = memberMessages.Select(m => m.AuthorId).ToList();
+        var members = await dbContext.GuildMembers
+            .Include(m => m.User)
+            .Where(m => m.GuildId == snowflake && topMemberIds.Contains(m.UserId))
+            .ToListAsync();
+
+        _topMembers = memberMessages.Select(mm => new MemberWithMessages
+        {
+            Member = members.FirstOrDefault(m => m.UserId == mm.AuthorId),
+            User = members.FirstOrDefault(m => m.UserId == mm.AuthorId)?.User,
+            Nickname = members.FirstOrDefault(m => m.UserId == mm.AuthorId)?.Nickname,
+            MessageCount = mm.Count
+        }).ToList();
+    }
+
+    private void NavigateToChannel(string channelId)
+    {
+        Navigation.NavigateTo($"/guild/{GuildId}/channel/{channelId}");
+    }
+
+    private string GetChannelIcon(ChannelType type) => type switch
+    {
+        ChannelType.Voice => Icons.Material.Filled.VolumeUp,
+        ChannelType.Category => Icons.Material.Filled.Folder,
+        ChannelType.News => Icons.Material.Filled.Announcement,
+        ChannelType.Stage => Icons.Material.Filled.Podcasts,
+        ChannelType.Forum => Icons.Material.Filled.Forum,
+        _ => Icons.Material.Filled.Tag
+    };
+
+    private Color GetStatusColor(DomainSyncStatus status) => status switch
+    {
+        DomainSyncStatus.InProgress => Color.Primary,
+        DomainSyncStatus.Completed => Color.Success,
+        DomainSyncStatus.Failed => Color.Error,
+        DomainSyncStatus.Paused => Color.Warning,
+        _ => Color.Default
+    };
+
+    private string GetInitials(string name)
+    {
+        var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length >= 2)
+            return $"{words[0][0]}{words[1][0]}".ToUpper();
+        return name.Length >= 2 ? name[..2].ToUpper() : name.ToUpper();
+    }
+
+    private string FormatNumber(long number)
+    {
+        if (number >= 1_000_000)
+            return $"{number / 1_000_000.0:0.#}M";
+        if (number >= 1_000)
+            return $"{number / 1_000.0:0.#}K";
+        return number.ToString("N0");
+    }
+
+    private string FormatTimeAgo(DateTime dt)
+    {
+        var span = DateTime.UtcNow - dt;
+        if (span.TotalMinutes < 1) return "just now";
+        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes}m ago";
+        if (span.TotalHours < 24) return $"{(int)span.TotalHours}h ago";
+        if (span.TotalDays < 7) return $"{(int)span.TotalDays}d ago";
+        return dt.ToLocalTime().ToString("MMM d");
+    }
+
+    private class GuildStats
+    {
+        public int ChannelCount { get; set; }
+        public int MemberCount { get; set; }
+        public long MessageCount { get; set; }
+        public int RoleCount { get; set; }
+    }
+
+    private class MemberWithMessages
+    {
+        public GuildMember? Member { get; set; }
+        public User? User { get; set; }
+        public string? Nickname { get; set; }
+        public long MessageCount { get; set; }
+    }
+}

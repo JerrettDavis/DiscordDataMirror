@@ -1,0 +1,325 @@
+@page "/guild/{GuildId}/channels"
+@inject IDbContextFactory<DiscordMirrorDbContext> DbContextFactory
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Channels - @(_guild?.Name ?? "Server")</PageTitle>
+
+<div class="page-header">
+    <div class="breadcrumbs">
+        <span class="breadcrumb-item">
+            <a href="/">Home</a>
+        </span>
+        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="breadcrumb-separator" />
+        <span class="breadcrumb-item">
+            <a href="@($"/guild/{GuildId}")">@(_guild?.Name ?? "Server")</a>
+        </span>
+        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="breadcrumb-separator" />
+        <span class="breadcrumb-item">Channels</span>
+    </div>
+</div>
+
+<div class="pa-6">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <MudText Typo="Typo.h5" Style="color: var(--discord-text-header);">
+            Channel Browser
+        </MudText>
+        <MudTextField T="string" @bind-Value="_searchQuery" Placeholder="Search channels..." 
+                      Variant="Variant.Outlined" Adornment="Adornment.Start" 
+                      AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true"
+                      Style="max-width: 300px;" />
+    </div>
+
+    @if (_channels == null)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else
+    {
+        <MudGrid Spacing="3">
+            <MudItem xs="12" md="5">
+                <MudPaper Elevation="0" Style="background-color: var(--discord-bg-secondary); height: calc(100vh - 200px); overflow-y: auto;">
+                    @foreach (var category in GetCategories())
+                    {
+                        <div class="channel-category" @onclick="() => ToggleCategory(category.Id.ToString())">
+                            <MudIcon Icon="@(_collapsedCategories.Contains(category.Id.ToString()) 
+                                ? Icons.Material.Filled.ChevronRight 
+                                : Icons.Material.Filled.KeyboardArrowDown)" 
+                                Size="Size.Small" />
+                            @category.Name.ToUpper()
+                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="ml-auto">
+                                @GetChannelsInCategory(category.Id).Count()
+                            </MudChip>
+                        </div>
+                        @if (!_collapsedCategories.Contains(category.Id.ToString()))
+                        {
+                            @foreach (var channel in GetChannelsInCategory(category.Id))
+                            {
+                                <div class="channel-item @(_selectedChannel?.Id == channel.Id ? "active" : "")"
+                                     @onclick="() => SelectChannel(channel)">
+                                    <MudIcon Icon="@GetChannelIcon(channel.Type)" Size="Size.Small" Class="channel-icon" />
+                                    <span class="channel-name">@channel.Name</span>
+                                    @if (_channelStats.TryGetValue(channel.Id.ToString(), out var stats))
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="ml-auto">
+                                            @FormatNumber(stats)
+                                        </MudChip>
+                                    }
+                                </div>
+                            }
+                        }
+                    }
+                    
+                    @* Uncategorized channels *@
+                    @{
+                        var uncategorized = GetUncategorizedChannels().ToList();
+                        if (uncategorized.Any())
+                        {
+                            <div class="channel-category">
+                                <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
+                                UNCATEGORIZED
+                                <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="ml-auto">
+                                    @uncategorized.Count
+                                </MudChip>
+                            </div>
+                            @foreach (var channel in uncategorized)
+                            {
+                                <div class="channel-item @(_selectedChannel?.Id == channel.Id ? "active" : "")"
+                                     @onclick="() => SelectChannel(channel)">
+                                    <MudIcon Icon="@GetChannelIcon(channel.Type)" Size="Size.Small" Class="channel-icon" />
+                                    <span class="channel-name">@channel.Name</span>
+                                    @if (_channelStats.TryGetValue(channel.Id.ToString(), out var stats))
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="ml-auto">
+                                            @FormatNumber(stats)
+                                        </MudChip>
+                                    }
+                                </div>
+                            }
+                        }
+                    }
+                </MudPaper>
+            </MudItem>
+            
+            <MudItem xs="12" md="7">
+                @if (_selectedChannel != null)
+                {
+                    <MudPaper Elevation="0" Class="pa-4" Style="background-color: var(--discord-bg-secondary);">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                            <MudIcon Icon="@GetChannelIcon(_selectedChannel.Type)" Size="Size.Large" 
+                                     Color="Color.Default" />
+                            <div>
+                                <MudText Typo="Typo.h5" Style="color: var(--discord-text-header);">
+                                    @_selectedChannel.Name
+                                </MudText>
+                                <MudText Typo="Typo.body2" Style="color: var(--discord-text-muted);">
+                                    @GetChannelTypeName(_selectedChannel.Type)
+                                </MudText>
+                            </div>
+                            <MudSpacer />
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                                       Href="@($"/guild/{GuildId}/channel/{_selectedChannel.Id}")">
+                                View Messages
+                            </MudButton>
+                        </div>
+                        
+                        @if (!string.IsNullOrEmpty(_selectedChannel.Topic))
+                        {
+                            <MudText Typo="Typo.body1" Style="color: var(--discord-text-normal); margin-bottom: 16px;">
+                                @_selectedChannel.Topic
+                            </MudText>
+                        }
+                        
+                        <MudDivider Class="my-4" />
+                        
+                        <MudGrid Spacing="2">
+                            <MudItem xs="6">
+                                <MudText Style="color: var(--discord-text-muted);">Messages</MudText>
+                                <MudText Typo="Typo.h6" Style="color: var(--discord-text-header);">
+                                    @(_channelStats.TryGetValue(_selectedChannel.Id.ToString(), out var msgCount) 
+                                        ? FormatNumber(msgCount) : "0")
+                                </MudText>
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudText Style="color: var(--discord-text-muted);">Position</MudText>
+                                <MudText Typo="Typo.h6" Style="color: var(--discord-text-header);">
+                                    @_selectedChannel.Position
+                                </MudText>
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudText Style="color: var(--discord-text-muted);">NSFW</MudText>
+                                <MudText Typo="Typo.h6" Style="color: var(--discord-text-header);">
+                                    @(_selectedChannel.IsNsfw ? "Yes" : "No")
+                                </MudText>
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudText Style="color: var(--discord-text-muted);">Last Synced</MudText>
+                                <MudText Typo="Typo.h6" Style="color: var(--discord-text-header);">
+                                    @(_selectedChannel.LastSyncedAt?.ToLocalTime().ToString("g") ?? "Never")
+                                </MudText>
+                            </MudItem>
+                        </MudGrid>
+                        
+                        @* Threads in this channel *@
+                        @if (_selectedChannelThreads?.Any() == true)
+                        {
+                            <MudDivider Class="my-4" />
+                            <MudText Typo="Typo.h6" Class="mb-3" Style="color: var(--discord-text-header);">
+                                Threads (@_selectedChannelThreads.Count)
+                            </MudText>
+                            @foreach (var thread in _selectedChannelThreads.Take(10))
+                            {
+                                <div class="channel-item" @onclick="() => NavigateToChannel(thread.Id.ToString())">
+                                    <MudIcon Icon="@Icons.Material.Filled.Forum" Size="Size.Small" Class="channel-icon" />
+                                    <span class="channel-name">@thread.Name</span>
+                                </div>
+                            }
+                        }
+                    </MudPaper>
+                }
+                else
+                {
+                    <div class="empty-state" style="height: 400px;">
+                        <MudIcon Icon="@Icons.Material.Filled.TouchApp" 
+                                 Style="font-size: 64px; color: var(--discord-text-muted);" />
+                        <div class="empty-state-title">Select a channel</div>
+                        <div class="empty-state-description">
+                            Click on a channel from the list to view its details
+                        </div>
+                    </div>
+                }
+            </MudItem>
+        </MudGrid>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string GuildId { get; set; } = "";
+
+    private Guild? _guild;
+    private List<Channel>? _channels;
+    private Channel? _selectedChannel;
+    private List<Channel>? _selectedChannelThreads;
+    private string _searchQuery = "";
+    private HashSet<string> _collapsedCategories = new();
+    private Dictionary<string, long> _channelStats = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        if (!ulong.TryParse(GuildId, out var guildIdParsed)) return;
+        
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        var snowflake = new Snowflake(guildIdParsed);
+
+        _guild = await dbContext.Guilds
+            .FirstOrDefaultAsync(g => g.Id == snowflake);
+
+        _channels = await dbContext.Channels
+            .Where(c => c.GuildId == snowflake)
+            .OrderBy(c => c.Position)
+            .ToListAsync();
+
+        // Get message counts per channel
+        var channelIds = _channels.Select(c => c.Id).ToList();
+        var messageCounts = await dbContext.Messages
+            .Where(m => channelIds.Contains(m.ChannelId))
+            .GroupBy(m => m.ChannelId)
+            .Select(g => new { ChannelId = g.Key, Count = g.LongCount() })
+            .ToListAsync();
+
+        _channelStats = messageCounts.ToDictionary(x => x.ChannelId.ToString(), x => x.Count);
+    }
+
+    private IEnumerable<Channel> GetCategories()
+    {
+        return _channels?
+            .Where(c => c.Type == ChannelType.Category)
+            .Where(c => string.IsNullOrEmpty(_searchQuery) || 
+                GetChannelsInCategory(c.Id).Any(ch => ch.Name.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(c => c.Position) ?? Enumerable.Empty<Channel>();
+    }
+
+    private IEnumerable<Channel> GetChannelsInCategory(Snowflake categoryId)
+    {
+        return _channels?
+            .Where(c => c.ParentId == categoryId && c.Type != ChannelType.Category && !c.IsThread)
+            .Where(c => string.IsNullOrEmpty(_searchQuery) || 
+                c.Name.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(c => c.Position) ?? Enumerable.Empty<Channel>();
+    }
+
+    private IEnumerable<Channel> GetUncategorizedChannels()
+    {
+        return _channels?
+            .Where(c => c.ParentId == null && c.Type != ChannelType.Category && !c.IsThread)
+            .Where(c => string.IsNullOrEmpty(_searchQuery) || 
+                c.Name.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(c => c.Position) ?? Enumerable.Empty<Channel>();
+    }
+
+    private void ToggleCategory(string categoryId)
+    {
+        if (_collapsedCategories.Contains(categoryId))
+            _collapsedCategories.Remove(categoryId);
+        else
+            _collapsedCategories.Add(categoryId);
+    }
+
+    private async Task SelectChannel(Channel channel)
+    {
+        _selectedChannel = channel;
+        
+        // Load threads for this channel
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        _selectedChannelThreads = await dbContext.Channels
+            .Where(c => c.ParentId == channel.Id && c.IsThread)
+            .OrderByDescending(c => c.CreatedAt)
+            .Take(20)
+            .ToListAsync();
+    }
+
+    private void NavigateToChannel(string channelId)
+    {
+        Navigation.NavigateTo($"/guild/{GuildId}/channel/{channelId}");
+    }
+
+    private string GetChannelIcon(ChannelType type) => type switch
+    {
+        ChannelType.Voice => Icons.Material.Filled.VolumeUp,
+        ChannelType.Category => Icons.Material.Filled.Folder,
+        ChannelType.News => Icons.Material.Filled.Announcement,
+        ChannelType.Stage => Icons.Material.Filled.Podcasts,
+        ChannelType.Forum => Icons.Material.Filled.Forum,
+        ChannelType.PublicThread or ChannelType.PrivateThread or ChannelType.NewsThread => Icons.Material.Filled.Forum,
+        _ => Icons.Material.Filled.Tag
+    };
+
+    private string GetChannelTypeName(ChannelType type) => type switch
+    {
+        ChannelType.Text => "Text Channel",
+        ChannelType.Voice => "Voice Channel",
+        ChannelType.Category => "Category",
+        ChannelType.News => "Announcement Channel",
+        ChannelType.Stage => "Stage Channel",
+        ChannelType.Forum => "Forum Channel",
+        ChannelType.PublicThread => "Public Thread",
+        ChannelType.PrivateThread => "Private Thread",
+        ChannelType.NewsThread => "Announcement Thread",
+        _ => "Channel"
+    };
+
+    private string FormatNumber(long number)
+    {
+        if (number >= 1_000_000)
+            return $"{number / 1_000_000.0:0.#}M";
+        if (number >= 1_000)
+            return $"{number / 1_000.0:0.#}K";
+        return number.ToString("N0");
+    }
+}

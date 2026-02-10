@@ -1,0 +1,126 @@
+@using DiscordDataMirror.Dashboard.Services
+@using Microsoft.AspNetCore.SignalR.Client
+@inject SyncHubConnection HubConnection
+@implements IDisposable
+
+<MudTooltip Text="@GetStatusText()" Placement="Placement.Left">
+    <div class="connection-indicator @GetStatusClass()">
+        <div class="connection-dot"></div>
+        @if (_showLabel)
+        {
+            <span class="connection-label">@GetShortStatus()</span>
+        }
+    </div>
+</MudTooltip>
+
+<style>
+    .connection-indicator {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border-radius: 12px;
+        transition: background-color 0.2s ease;
+    }
+
+    .connection-indicator:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .connection-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        transition: background-color 0.3s ease;
+    }
+
+    .connection-label {
+        font-size: 12px;
+        color: var(--discord-text-muted);
+    }
+
+    .status-connected .connection-dot {
+        background-color: #23a559;
+        box-shadow: 0 0 4px #23a559;
+    }
+
+    .status-connecting .connection-dot {
+        background-color: #f0b232;
+        animation: pulse 1.5s infinite;
+    }
+
+    .status-disconnected .connection-dot {
+        background-color: #f23f43;
+    }
+
+    .status-reconnecting .connection-dot {
+        background-color: #f0b232;
+        animation: pulse 1s infinite;
+    }
+
+    @@keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+    }
+</style>
+
+@code {
+    [Parameter]
+    public bool ShowLabel { get; set; } = false;
+
+    private bool _showLabel;
+    private HubConnectionState _state = HubConnectionState.Disconnected;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _showLabel = ShowLabel;
+        _state = HubConnection.State;
+        
+        HubConnection.OnConnectionStateChanged += OnConnectionStateChanged;
+        
+        // Start connection if not already connected
+        try
+        {
+            await HubConnection.StartAsync();
+        }
+        catch
+        {
+            // Connection errors are logged by the service
+        }
+    }
+
+    private async Task OnConnectionStateChanged(HubConnectionState state)
+    {
+        _state = state;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private string GetStatusClass() => _state switch
+    {
+        HubConnectionState.Connected => "status-connected",
+        HubConnectionState.Connecting => "status-connecting",
+        HubConnectionState.Reconnecting => "status-reconnecting",
+        _ => "status-disconnected"
+    };
+
+    private string GetStatusText() => _state switch
+    {
+        HubConnectionState.Connected => "Real-time updates connected",
+        HubConnectionState.Connecting => "Connecting to real-time updates...",
+        HubConnectionState.Reconnecting => "Reconnecting to real-time updates...",
+        _ => "Real-time updates disconnected"
+    };
+
+    private string GetShortStatus() => _state switch
+    {
+        HubConnectionState.Connected => "Live",
+        HubConnectionState.Connecting => "Connecting",
+        HubConnectionState.Reconnecting => "Reconnecting",
+        _ => "Offline"
+    };
+
+    public void Dispose()
+    {
+        HubConnection.OnConnectionStateChanged -= OnConnectionStateChanged;
+    }
+}

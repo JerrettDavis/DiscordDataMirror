@@ -1,0 +1,289 @@
+@page "/guild/{GuildId}/members"
+@inject IDbContextFactory<DiscordMirrorDbContext> DbContextFactory
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Members - @(_guild?.Name ?? "Server")</PageTitle>
+
+<div class="page-header">
+    <div class="breadcrumbs">
+        <span class="breadcrumb-item">
+            <a href="/">Home</a>
+        </span>
+        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="breadcrumb-separator" />
+        <span class="breadcrumb-item">
+            <a href="@($"/guild/{GuildId}")">@(_guild?.Name ?? "Server")</a>
+        </span>
+        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="breadcrumb-separator" />
+        <span class="breadcrumb-item">Members</span>
+    </div>
+</div>
+
+<div class="pa-6">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <div>
+            <MudText Typo="Typo.h5" Style="color: var(--discord-text-header);">
+                Members
+            </MudText>
+            <MudText Typo="Typo.body2" Style="color: var(--discord-text-muted);">
+                @_totalCount.ToString("N0") members in this server
+            </MudText>
+        </div>
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <MudTextField T="string" @bind-Value="_searchQuery" Placeholder="Search members..." 
+                          Variant="Variant.Outlined" Adornment="Adornment.Start" Margin="Margin.Dense"
+                          AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true"
+                          Style="width: 250px;" DebounceInterval="300" OnDebounceIntervalElapsed="Search" />
+            <MudSelect T="string" @bind-Value="_roleFilter" Label="Role" Variant="Variant.Outlined" 
+                       Margin="Margin.Dense" Style="width: 180px;">
+                <MudSelectItem Value="@("")">All Roles</MudSelectItem>
+                @if (_roles != null)
+                {
+                    @foreach (var role in _roles.OrderByDescending(r => r.Position))
+                    {
+                        <MudSelectItem Value="@role.Id.ToString()">@role.Name</MudSelectItem>
+                    }
+                }
+            </MudSelect>
+            <MudSelect T="string" @bind-Value="_sortBy" Label="Sort by" Variant="Variant.Outlined"
+                       Margin="Margin.Dense" Style="width: 150px;">
+                <MudSelectItem Value="@("joined")">Joined Date</MudSelectItem>
+                <MudSelectItem Value="@("name")">Name</MudSelectItem>
+                <MudSelectItem Value="@("messages")">Messages</MudSelectItem>
+            </MudSelect>
+        </div>
+    </div>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_members == null || !_members.Any())
+    {
+        <div class="empty-state">
+            <MudIcon Icon="@Icons.Material.Filled.PeopleOutline" 
+                     Style="font-size: 64px; color: var(--discord-text-muted);" />
+            <div class="empty-state-title">No members found</div>
+            <div class="empty-state-description">
+                @if (!string.IsNullOrEmpty(_searchQuery))
+                {
+                    <span>No members match your search criteria</span>
+                }
+                else
+                {
+                    <span>This server doesn't have any synced members yet</span>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <MudTable Items="@_members" Hover="true" Dense="true" Elevation="0"
+                  Style="background-color: var(--discord-bg-secondary);">
+            <HeaderContent>
+                <MudTh>Member</MudTh>
+                <MudTh>Joined</MudTh>
+                <MudTh>Messages</MudTh>
+                <MudTh>Roles</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <MudAvatar Size="Size.Medium">
+                            @if (!string.IsNullOrEmpty(context.User?.AvatarUrl))
+                            {
+                                <MudImage Src="@context.User.AvatarUrl" Alt="@GetDisplayName(context)" />
+                            }
+                            else
+                            {
+                                @GetInitials(GetDisplayName(context))
+                            }
+                        </MudAvatar>
+                        <div>
+                            <MudText Style="color: var(--discord-text-header); font-weight: 500;">
+                                @GetDisplayName(context)
+                                @if (context.User?.IsBot == true)
+                                {
+                                    <span class="bot-tag">BOT</span>
+                                }
+                            </MudText>
+                            <MudText Style="color: var(--discord-text-muted); font-size: 12px;">
+                                @(context.User?.Username ?? "Unknown")
+                            </MudText>
+                        </div>
+                    </div>
+                </MudTd>
+                <MudTd>
+                    <MudText Style="color: var(--discord-text-normal);">
+                        @(context.JoinedAt?.ToLocalTime().ToString("MMM d, yyyy") ?? "Unknown")
+                    </MudText>
+                </MudTd>
+                <MudTd>
+                    <MudText Style="color: var(--discord-text-normal);">
+                        @(_memberMessageCounts.TryGetValue(context.UserId.ToString(), out var count) 
+                            ? FormatNumber(count) : "0")
+                    </MudText>
+                </MudTd>
+                <MudTd>
+                    <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                        @foreach (var roleId in context.RoleIds.Take(3))
+                        {
+                            var role = _roles?.FirstOrDefault(r => r.Id.ToString() == roleId);
+                            if (role != null)
+                            {
+                                var color = role.Color > 0 ? $"#{role.Color:X6}" : "var(--discord-text-muted)";
+                                <MudChip T="string" Size="Size.Small" 
+                                         Style="@($"background-color: {color}20; color: {color}; border: 1px solid {color}40; font-size: 11px;")">
+                                    @role.Name
+                                </MudChip>
+                            }
+                        }
+                        @if (context.RoleIds.Count > 3)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Default" 
+                                     Style="font-size: 11px;">
+                                +@(context.RoleIds.Count - 3)
+                            </MudChip>
+                        }
+                    </div>
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new int[] { 25, 50, 100 }" />
+            </PagerContent>
+        </MudTable>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string GuildId { get; set; } = "";
+
+    private Guild? _guild;
+    private List<GuildMember>? _members;
+    private List<Role>? _roles;
+    private Dictionary<string, long> _memberMessageCounts = new();
+    private bool _loading = true;
+    private int _totalCount = 0;
+    private string _searchQuery = "";
+    private string _roleFilter = "";
+    private string _sortBy = "joined";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        
+        if (!ulong.TryParse(GuildId, out var guildIdParsed)) return;
+        
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        var snowflake = new Snowflake(guildIdParsed);
+
+        _guild = await dbContext.Guilds
+            .FirstOrDefaultAsync(g => g.Id == snowflake);
+
+        _roles = await dbContext.Roles
+            .Where(r => r.GuildId == snowflake)
+            .OrderByDescending(r => r.Position)
+            .ToListAsync();
+
+        await LoadMembers();
+        
+        _loading = false;
+    }
+
+    private async Task LoadMembers()
+    {
+        if (!ulong.TryParse(GuildId, out var guildIdParsed)) return;
+        
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        var snowflake = new Snowflake(guildIdParsed);
+
+        var query = dbContext.GuildMembers
+            .Include(m => m.User)
+            .Where(m => m.GuildId == snowflake);
+
+        // Apply search filter
+        if (!string.IsNullOrWhiteSpace(_searchQuery))
+        {
+            query = query.Where(m => 
+                (m.Nickname != null && m.Nickname.Contains(_searchQuery)) ||
+                (m.User != null && m.User.Username.Contains(_searchQuery)) ||
+                (m.User != null && m.User.GlobalName != null && m.User.GlobalName.Contains(_searchQuery)));
+        }
+
+        // Apply role filter
+        if (!string.IsNullOrEmpty(_roleFilter))
+        {
+            query = query.Where(m => m.RoleIds.Contains(_roleFilter));
+        }
+
+        _totalCount = await query.CountAsync();
+
+        // Apply sorting
+        query = _sortBy switch
+        {
+            "name" => query.OrderBy(m => m.Nickname ?? m.User!.Username),
+            "messages" => query.OrderByDescending(m => m.UserId), // Will need to adjust later
+            _ => query.OrderByDescending(m => m.JoinedAt)
+        };
+
+        _members = await query.Take(100).ToListAsync();
+
+        // Get message counts for displayed members
+        var channelIds = await dbContext.Channels
+            .Where(c => c.GuildId == snowflake)
+            .Select(c => c.Id)
+            .ToListAsync();
+
+        var memberIds = _members.Select(m => m.UserId).ToList();
+        var messageCounts = await dbContext.Messages
+            .Where(m => channelIds.Contains(m.ChannelId) && memberIds.Contains(m.AuthorId))
+            .GroupBy(m => m.AuthorId)
+            .Select(g => new { AuthorId = g.Key, Count = g.LongCount() })
+            .ToListAsync();
+
+        _memberMessageCounts = messageCounts.ToDictionary(x => x.AuthorId.ToString(), x => x.Count);
+
+        // Re-sort by messages if needed
+        if (_sortBy == "messages")
+        {
+            _members = _members
+                .OrderByDescending(m => _memberMessageCounts.GetValueOrDefault(m.UserId.ToString(), 0))
+                .ToList();
+        }
+    }
+
+    private async Task Search()
+    {
+        _loading = true;
+        await LoadMembers();
+        _loading = false;
+    }
+
+    private string GetDisplayName(GuildMember member)
+    {
+        return member.Nickname ?? member.User?.DisplayName ?? "Unknown User";
+    }
+
+    private string GetInitials(string name)
+    {
+        var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length >= 2)
+            return $"{words[0][0]}{words[1][0]}".ToUpper();
+        return name.Length >= 2 ? name[..2].ToUpper() : name.ToUpper();
+    }
+
+    private string FormatNumber(long number)
+    {
+        if (number >= 1_000_000)
+            return $"{number / 1_000_000.0:0.#}M";
+        if (number >= 1_000)
+            return $"{number / 1_000.0:0.#}K";
+        return number.ToString("N0");
+    }
+}

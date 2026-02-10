@@ -1,0 +1,468 @@
+@page "/sync"
+@using DiscordDataMirror.Dashboard.Services
+@using DiscordDataMirror.Application.Events
+@inject IDbContextFactory<DiscordMirrorDbContext> DbContextFactory
+@inject NavigationManager Navigation
+@inject SyncHubConnection HubConnection
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@implements IAsyncDisposable
+@rendermode InteractiveServer
+
+<PageTitle>Sync Status - Discord Data Mirror</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Sync Status</h1>
+        <p class="page-subtitle">Monitor and manage data synchronization</p>
+    </div>
+    <MudSpacer />
+    <div style="display: flex; gap: 8px;">
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                   OnClick="RefreshData">
+            Refresh
+        </MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Sync"
+                   OnClick="OpenSyncAllDialog" Disabled="@(!_guilds?.Any() ?? true)">
+            Sync All Guilds
+        </MudButton>
+    </div>
+</div>
+
+<div class="pa-6">
+    @* Overview stats *@
+    <MudGrid Spacing="3" Class="mb-6">
+        <MudItem xs="12" sm="6" md="3">
+            <StatsCard Icon="@Icons.Material.Filled.Sync" 
+                       Value="@_inProgressCount.ToString()" 
+                       Label="In Progress" 
+                       IconClass="primary" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatsCard Icon="@Icons.Material.Filled.CheckCircle" 
+                       Value="@_completedCount.ToString()" 
+                       Label="Completed" 
+                       IconClass="success" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatsCard Icon="@Icons.Material.Filled.Error" 
+                       Value="@_failedCount.ToString()" 
+                       Label="Failed" 
+                       IconClass="error" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatsCard Icon="@Icons.Material.Filled.Pause" 
+                       Value="@_idleCount.ToString()" 
+                       Label="Idle" 
+                       IconClass="warning" />
+        </MudItem>
+    </MudGrid>
+
+    @* Filter tabs *@
+    <MudTabs @bind-ActivePanelIndex="_activeTab" Elevation="0" 
+             Style="background-color: var(--discord-bg-secondary); border-radius: 8px; margin-bottom: 24px;">
+        <MudTabPanel Text="All" BadgeData="@_syncStates?.Count" BadgeColor="Color.Default" />
+        <MudTabPanel Text="In Progress" BadgeData="@_inProgressCount" BadgeColor="Color.Primary" />
+        <MudTabPanel Text="Completed" BadgeData="@_completedCount" BadgeColor="Color.Success" />
+        <MudTabPanel Text="Failed" BadgeData="@_failedCount" BadgeColor="Color.Error" />
+    </MudTabs>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_filteredStates == null || !_filteredStates.Any())
+    {
+        <div class="empty-state">
+            <MudIcon Icon="@Icons.Material.Filled.SyncDisabled" 
+                     Style="font-size: 64px; color: var(--discord-text-muted);" />
+            <div class="empty-state-title">No sync states</div>
+            <div class="empty-state-description">
+                No synchronization data to display in this category.
+            </div>
+        </div>
+    }
+    else
+    {
+        @* Group by guild *@
+        @foreach (var guildGroup in _filteredStates.GroupBy(s => GetGuildId(s)))
+        {
+            var guild = _guilds?.FirstOrDefault(g => g.Id.ToString() == guildGroup.Key);
+            
+            <MudPaper Elevation="0" Class="mb-4 pa-4" Style="background-color: var(--discord-bg-secondary);">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                    @if (guild != null)
+                    {
+                        <MudAvatar Size="Size.Medium">
+                            @if (!string.IsNullOrEmpty(guild.IconUrl))
+                            {
+                                <MudImage Src="@guild.IconUrl" Alt="@guild.Name" />
+                            }
+                            else
+                            {
+                                @GetInitials(guild.Name)
+                            }
+                        </MudAvatar>
+                        <MudText Typo="Typo.h6" Style="color: var(--discord-text-header);">
+                            @guild.Name
+                        </MudText>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                                   Href="@($"/guild/{guild.Id}")">
+                            View Server
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Sync"
+                                   OnClick="() => TriggerGuildSync(guild.Id.ToString(), guild.Name)">
+                            Sync Now
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.h6" Style="color: var(--discord-text-header);">
+                            @(guildGroup.Key ?? "Unknown")
+                        </MudText>
+                    }
+                </div>
+
+                <MudTable Items="@guildGroup" Hover="true" Dense="true" Elevation="0"
+                          Style="background-color: transparent;">
+                    <HeaderContent>
+                        <MudTh>Entity Type</MudTh>
+                        <MudTh>Entity</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Last Synced</MudTh>
+                        <MudTh>Details</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd>
+                            <MudChip T="string" Size="Size.Small" Color="@GetEntityTypeColor(context.EntityType)">
+                                @context.EntityType
+                            </MudChip>
+                        </MudTd>
+                        <MudTd>
+                            <MudText Style="color: var(--discord-text-normal);">
+                                @GetEntityName(context)
+                            </MudText>
+                        </MudTd>
+                        <MudTd>
+                            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)" 
+                                     Variant="Variant.Filled">
+                                @if (context.Status == DomainSyncStatus.InProgress)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" 
+                                                         Style="width: 12px; height: 12px;" />
+                                }
+                                @context.Status
+                            </MudChip>
+                        </MudTd>
+                        <MudTd>
+                            <MudText Style="color: var(--discord-text-muted);">
+                                @(context.LastSyncedAt != default 
+                                    ? FormatTimeAgo(context.LastSyncedAt) 
+                                    : "Never")
+                            </MudText>
+                        </MudTd>
+                        <MudTd>
+                            @if (!string.IsNullOrEmpty(context.ErrorMessage))
+                            {
+                                <MudTooltip Text="@context.ErrorMessage">
+                                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Color="Color.Error" 
+                                             Size="Size.Small" />
+                                </MudTooltip>
+                            }
+                            @if (context.LastMessageId.HasValue)
+                            {
+                                <MudTooltip Text="@($"Last message ID: {context.LastMessageId}")">
+                                    <MudIcon Icon="@Icons.Material.Filled.Message" Color="Color.Default" 
+                                             Size="Size.Small" Class="ml-1" />
+                                </MudTooltip>
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        }
+    }
+
+    @* Recent activity timeline *@
+    <MudText Typo="Typo.h6" Class="mt-6 mb-4" Style="color: var(--discord-text-header);">
+        Recent Activity
+    </MudText>
+    
+    <MudPaper Elevation="0" Class="pa-4" Style="background-color: var(--discord-bg-secondary);">
+        @if (_recentActivity?.Any() == true)
+        {
+            <MudTimeline TimelineOrientation="TimelineOrientation.Vertical" TimelinePosition="TimelinePosition.Start">
+                @foreach (var activity in _recentActivity)
+                {
+                    <MudTimelineItem Color="@GetStatusColor(activity.Status)" Size="Size.Small">
+                        <ItemContent>
+                            <MudText Style="color: var(--discord-text-header);">
+                                @activity.EntityType - @GetEntityName(activity)
+                            </MudText>
+                            <MudText Typo="Typo.body2" Style="color: var(--discord-text-muted);">
+                                @activity.Status at @activity.LastSyncedAt.ToLocalTime().ToString("g")
+                            </MudText>
+                        </ItemContent>
+                    </MudTimelineItem>
+                }
+            </MudTimeline>
+        }
+        else
+        {
+            <MudText Style="color: var(--discord-text-muted);">No recent activity</MudText>
+        }
+    </MudPaper>
+</div>
+
+@code {
+    private List<SyncState>? _syncStates;
+    private List<SyncState>? _filteredStates;
+    private List<SyncState>? _recentActivity;
+    private List<Guild>? _guilds;
+    private Dictionary<string, Channel> _channelCache = new();
+    private bool _loading = true;
+    private int _activeTab = 0;
+    
+    private int _inProgressCount = 0;
+    private int _completedCount = 0;
+    private int _failedCount = 0;
+    private int _idleCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+        await SetupSignalR();
+    }
+
+    private async Task SetupSignalR()
+    {
+        try
+        {
+            await HubConnection.StartAsync();
+            await HubConnection.SubscribeToSyncStatusAsync();
+            
+            HubConnection.OnSyncProgress += OnSyncProgress;
+            HubConnection.OnSyncError += OnSyncError;
+            HubConnection.OnGuildSynced += OnGuildSynced;
+            HubConnection.OnChannelSynced += OnChannelSynced;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to connect to real-time updates: {ex.Message}", Severity.Warning);
+        }
+    }
+
+    private async Task OnSyncProgress(SyncProgressEvent evt)
+    {
+        // Refresh data from database to get latest state
+        await LoadData();
+        await InvokeAsync(StateHasChanged);
+        
+        // Show snackbar for significant progress
+        if (evt.PercentComplete.HasValue && (int)evt.PercentComplete.Value % 25 == 0 && evt.PercentComplete.Value > 0)
+        {
+            Snackbar.Add($"Syncing {evt.GuildName}: {evt.PercentComplete:F0}%", Severity.Info);
+        }
+    }
+
+    private async Task OnSyncError(SyncErrorEvent evt)
+    {
+        Snackbar.Add($"Sync error in {evt.GuildName ?? evt.GuildId}: {evt.ErrorMessage}", Severity.Error);
+        await LoadData(); // Refresh to get latest state
+    }
+
+    private async Task OnGuildSynced(GuildSyncedEvent evt)
+    {
+        Snackbar.Add($"Guild '{evt.GuildName}' sync completed", Severity.Success);
+        await LoadData(); // Refresh to get latest state
+    }
+
+    private async Task OnChannelSynced(ChannelSyncedEvent evt)
+    {
+        // Refresh data periodically, not on every channel
+        await LoadData();
+    }
+
+    private void UpdateCounts()
+    {
+        if (_syncStates == null) return;
+        _inProgressCount = _syncStates.Count(s => s.Status == DomainSyncStatus.InProgress);
+        _completedCount = _syncStates.Count(s => s.Status == DomainSyncStatus.Completed);
+        _failedCount = _syncStates.Count(s => s.Status == DomainSyncStatus.Failed);
+        _idleCount = _syncStates.Count(s => s.Status == DomainSyncStatus.Idle);
+        FilterStates();
+    }
+
+    protected override void OnParametersSet()
+    {
+        FilterStates();
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        
+        _syncStates = await dbContext.SyncStates
+            .OrderByDescending(s => s.LastSyncedAt)
+            .ToListAsync();
+
+        _guilds = await dbContext.Guilds.ToListAsync();
+
+        // Pre-cache channels for display
+        var channelIdStrings = _syncStates
+            .Where(s => s.EntityType == "Channel")
+            .Select(s => s.EntityId)
+            .Distinct()
+            .ToList();
+        
+        // Parse to Snowflakes for EF comparison
+        var channelSnowflakes = channelIdStrings
+            .Where(id => Snowflake.TryParse(id, out _))
+            .Select(id => new Snowflake(id))
+            .ToList();
+            
+        var channels = await dbContext.Channels
+            .Where(c => channelSnowflakes.Contains(c.Id))
+            .ToListAsync();
+        _channelCache = channels.ToDictionary(c => c.Id.ToString(), c => c);
+
+        _inProgressCount = _syncStates.Count(s => s.Status == DomainSyncStatus.InProgress);
+        _completedCount = _syncStates.Count(s => s.Status == DomainSyncStatus.Completed);
+        _failedCount = _syncStates.Count(s => s.Status == DomainSyncStatus.Failed);
+        _idleCount = _syncStates.Count(s => s.Status == DomainSyncStatus.Idle);
+
+        _recentActivity = _syncStates
+            .Where(s => s.LastSyncedAt != default)
+            .OrderByDescending(s => s.LastSyncedAt)
+            .Take(10)
+            .ToList();
+
+        FilterStates();
+        
+        _loading = false;
+    }
+
+    private void FilterStates()
+    {
+        if (_syncStates == null) return;
+        
+        _filteredStates = _activeTab switch
+        {
+            1 => _syncStates.Where(s => s.Status == DomainSyncStatus.InProgress).ToList(),
+            2 => _syncStates.Where(s => s.Status == DomainSyncStatus.Completed).ToList(),
+            3 => _syncStates.Where(s => s.Status == DomainSyncStatus.Failed).ToList(),
+            _ => _syncStates
+        };
+    }
+
+    private string GetGuildId(SyncState state)
+    {
+        if (state.EntityType == "Guild")
+            return state.EntityId;
+            
+        // For channels, get the guild ID from cache
+        if (state.EntityType == "Channel" && _channelCache.TryGetValue(state.EntityId, out var channel))
+            return channel.GuildId.ToString();
+            
+        return state.EntityId;
+    }
+
+    private string GetEntityName(SyncState state)
+    {
+        if (state.EntityType == "Guild")
+        {
+            var guild = _guilds?.FirstOrDefault(g => g.Id.ToString() == state.EntityId);
+            return guild?.Name ?? state.EntityId;
+        }
+        
+        if (state.EntityType == "Channel" && _channelCache.TryGetValue(state.EntityId, out var channel))
+            return $"#{channel.Name}";
+            
+        return state.EntityId;
+    }
+
+    private Color GetStatusColor(DomainSyncStatus status) => status switch
+    {
+        DomainSyncStatus.InProgress => Color.Primary,
+        DomainSyncStatus.Completed => Color.Success,
+        DomainSyncStatus.Failed => Color.Error,
+        DomainSyncStatus.Paused => Color.Warning,
+        _ => Color.Default
+    };
+
+    private Color GetEntityTypeColor(string entityType) => entityType switch
+    {
+        "Guild" => Color.Primary,
+        "Channel" => Color.Success,
+        "User" => Color.Warning,
+        "Message" => Color.Info,
+        _ => Color.Default
+    };
+
+    private string GetInitials(string name)
+    {
+        var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length >= 2)
+            return $"{words[0][0]}{words[1][0]}".ToUpper();
+        return name.Length >= 2 ? name[..2].ToUpper() : name.ToUpper();
+    }
+
+    private string FormatTimeAgo(DateTime dt)
+    {
+        var span = DateTime.UtcNow - dt;
+        if (span.TotalSeconds < 60) return "just now";
+        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes}m ago";
+        if (span.TotalHours < 24) return $"{(int)span.TotalHours}h ago";
+        if (span.TotalDays < 7) return $"{(int)span.TotalDays}d ago";
+        return dt.ToLocalTime().ToString("MMM d");
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadData();
+        Snackbar.Add("Data refreshed", Severity.Info);
+    }
+
+    private async Task TriggerGuildSync(string guildId, string guildName)
+    {
+        try
+        {
+            await HubConnection.RequestGuildSyncAsync(guildId);
+            Snackbar.Add($"Sync requested for {guildName}", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to request sync: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OpenSyncAllDialog()
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Sync All Guilds",
+            "This will trigger a full sync for all guilds. This may take a while and use API quota. Continue?",
+            yesText: "Sync All",
+            cancelText: "Cancel");
+
+        if (result == true && _guilds != null)
+        {
+            foreach (var guild in _guilds)
+            {
+                await TriggerGuildSync(guild.Id.ToString(), guild.Name);
+                await Task.Delay(500); // Small delay between requests
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        HubConnection.OnSyncProgress -= OnSyncProgress;
+        HubConnection.OnSyncError -= OnSyncError;
+        HubConnection.OnGuildSynced -= OnGuildSynced;
+        HubConnection.OnChannelSynced -= OnChannelSynced;
+        await HubConnection.UnsubscribeFromSyncStatusAsync();
+    }
+}

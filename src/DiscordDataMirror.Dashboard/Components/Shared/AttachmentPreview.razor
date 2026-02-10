@@ -1,0 +1,62 @@
+@* Attachment preview component *@
+
+@if (Attachment.IsImage)
+{
+    <a href="@Attachment.Url" target="_blank">
+        <img src="@Attachment.Url" alt="@Attachment.Filename" class="attachment-image" loading="lazy" />
+    </a>
+}
+else
+{
+    <div class="attachment-file">
+        <div class="attachment-file-icon">
+            <MudIcon Icon="@GetFileIcon()" Size="Size.Large" />
+        </div>
+        <div>
+            <a href="@Attachment.Url" target="_blank" class="attachment-file-name">
+                @Attachment.Filename
+            </a>
+            <div class="attachment-file-size">@FormatFileSize(Attachment.Size)</div>
+        </div>
+        <MudIconButton Icon="@Icons.Material.Filled.Download" 
+                       Href="@Attachment.Url" 
+                       Target="_blank"
+                       Size="Size.Small" 
+                       Color="Color.Default" />
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public Attachment Attachment { get; set; } = default!;
+    
+    private string GetFileIcon()
+    {
+        var ext = System.IO.Path.GetExtension(Attachment.Filename).ToLowerInvariant();
+        return ext switch
+        {
+            ".pdf" => Icons.Material.Filled.PictureAsPdf,
+            ".doc" or ".docx" => Icons.Material.Filled.Description,
+            ".xls" or ".xlsx" => Icons.Material.Filled.TableChart,
+            ".zip" or ".rar" or ".7z" => Icons.Material.Filled.FolderZip,
+            ".mp3" or ".wav" or ".ogg" or ".flac" => Icons.Material.Filled.AudioFile,
+            ".mp4" or ".avi" or ".mkv" or ".webm" => Icons.Material.Filled.VideoFile,
+            ".txt" => Icons.Material.Filled.TextSnippet,
+            ".json" or ".xml" or ".html" or ".css" or ".js" => Icons.Material.Filled.Code,
+            _ => Icons.Material.Filled.InsertDriveFile
+        };
+    }
+    
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        int order = 0;
+        double size = bytes;
+        while (size >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            size /= 1024;
+        }
+        return $"{size:0.##} {sizes[order]}";
+    }
+}

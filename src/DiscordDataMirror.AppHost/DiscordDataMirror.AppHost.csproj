@@ -1,0 +1,20 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.1.0">
+
+  <ItemGroup>
+    <ProjectReference Include="..\DiscordDataMirror.Bot\DiscordDataMirror.Bot.csproj" />
+    <ProjectReference Include="..\DiscordDataMirror.Dashboard\DiscordDataMirror.Dashboard.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.1.0" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>dd6b3ab1-b5ab-43f9-829e-7ae4421c85cc</UserSecretsId>
+  </PropertyGroup>
+
+</Project>

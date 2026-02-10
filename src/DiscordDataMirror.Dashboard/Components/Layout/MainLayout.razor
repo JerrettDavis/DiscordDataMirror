@@ -1,0 +1,424 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject IDbContextFactory<DiscordMirrorDbContext> DbContextFactory
+@implements IDisposable
+
+<MudThemeProvider Theme="_theme" IsDarkMode="true" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<div class="app-container" style="display: grid !important; grid-template-columns: 72px 1fr !important; height: 100vh; width: 100vw;">
+    @* Server list sidebar (far left, like Discord) *@
+    <div class="server-list-sidebar" style="grid-column: 1; height: 100vh; display: flex; flex-direction: column; align-items: center; background-color: #1e1f22; padding-top: 12px; overflow-y: auto;">
+        <div class="server-list-content">
+            @* Server icons *@
+            @if (_guilds != null)
+            {
+                @foreach (var guild in _guilds)
+                {
+                    <MudTooltip Text="@guild.Name" Placement="Placement.Right">
+                        <a href="@($"/guild/{guild.Id}")" 
+                           class="server-icon @(SelectedGuildId == guild.Id.ToString() ? "active" : "")">
+                            @if (!string.IsNullOrEmpty(guild.IconUrl))
+                            {
+                                <img src="@guild.IconUrl" alt="@guild.Name" />
+                            }
+                            else
+                            {
+                                <span class="initials">@GetInitials(guild.Name)</span>
+                            }
+                        </a>
+                    </MudTooltip>
+                }
+            }
+            
+            <div class="server-divider"></div>
+            
+            @* Sync status button *@
+            <MudTooltip Text="Sync Status" Placement="Placement.Right">
+                <a href="/sync" class="server-icon @(IsSyncPage ? "active" : "")">
+                    <MudIcon Icon="@Icons.Material.Filled.Sync" Size="Size.Medium" 
+                             Color="@(_hasSyncingItems ? Color.Primary : Color.Default)" />
+                </a>
+            </MudTooltip>
+            
+            @* Connection status indicator *@
+            <div style="margin-top: auto; padding-bottom: 12px;">
+                <ConnectionStatus />
+            </div>
+        </div>
+    </div>
+
+    @* Main content area with optional channel sidebar *@
+    <div class="main-area" style="grid-column: 2; height: 100vh; overflow: hidden;">
+    <MudLayout Style="height: 100%; width: 100%;">
+        <MudDrawer @bind-Open="@_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="0"
+                   Variant="DrawerVariant.Responsive" Breakpoint="Breakpoint.Md">
+            @if (!string.IsNullOrEmpty(SelectedGuildId) && _selectedGuild != null)
+            {
+                <div class="guild-header">
+                    <a href="/" class="home-link" title="Back to Home">
+                        <MudIcon Icon="@Icons.Material.Filled.Home" Size="Size.Small" />
+                    </a>
+                    <span>@_selectedGuild.Name</span>
+                </div>
+                <MudNavMenu>
+                    <MudNavLink Href="@($"/guild/{SelectedGuildId}")" Icon="@Icons.Material.Filled.Dashboard">
+                        Overview
+                    </MudNavLink>
+                    <MudNavLink Href="@($"/guild/{SelectedGuildId}/channels")" Icon="@Icons.Material.Filled.Tag">
+                        Channels
+                    </MudNavLink>
+                    <MudNavLink Href="@($"/guild/{SelectedGuildId}/members")" Icon="@Icons.Material.Filled.People">
+                        Members
+                    </MudNavLink>
+                </MudNavMenu>
+                
+                @* Channel list *@
+                <MudNavMenu Class="channel-list">
+                    @if (_channels != null)
+                    {
+                        @foreach (var category in _channels.Where(c => c.Type == ChannelType.Category).OrderBy(c => c.Position))
+                        {
+                            <div class="channel-category">
+                                <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
+                                <span>@category.Name.ToUpperInvariant()</span>
+                            </div>
+                            @foreach (var channel in _channels.Where(c => c.ParentId == category.Id && IsNavigableChannel(c)).OrderBy(c => c.Position))
+                            {
+                                <MudNavLink Href="@($"/guild/{SelectedGuildId}/channel/{channel.Id.Value}")"
+                                            Icon="@GetChannelIcon(channel.Type)"
+                                            IconColor="Color.Default">
+                                    @channel.Name
+                                </MudNavLink>
+                            }
+                        }
+                        @* Channels without category *@
+                        @foreach (var channel in _channels.Where(c => c.ParentId == null && IsNavigableChannel(c)).OrderBy(c => c.Position))
+                        {
+                            <MudNavLink Href="@($"/guild/{SelectedGuildId}/channel/{channel.Id.Value}")"
+                                        Icon="@GetChannelIcon(channel.Type)"
+                                        IconColor="Color.Default">
+                                @channel.Name
+                            </MudNavLink>
+                        }
+                    }
+                </MudNavMenu>
+            }
+            else
+            {
+                <div class="guild-header">
+                    <span>Discord Data Mirror</span>
+                </div>
+                <MudNavMenu>
+                    <MudNavLink Href="/" Icon="@Icons.Material.Filled.Home" Match="NavLinkMatch.All">
+                        Home
+                    </MudNavLink>
+                    <MudNavLink Href="/sync" Icon="@Icons.Material.Filled.Sync">
+                        Sync Status
+                    </MudNavLink>
+                </MudNavMenu>
+            }
+        </MudDrawer>
+        
+        <MudMainContent Class="main-content">
+            <MudContainer MaxWidth="MaxWidth.False" Class="pa-0" Style="display: flex; flex-direction: column; flex: 1; min-height: 0; height: 100%;">
+                @Body
+            </MudContainer>
+        </MudMainContent>
+    </MudLayout>
+    </div>
+</div>
+
+<style>
+    /* Channel list styling - these complement the global styles in app.css */
+    .channel-list {
+        padding: 0 8px;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .channel-category {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 16px 8px 4px 4px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--discord-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        cursor: pointer;
+    }
+
+    .channel-category:hover {
+        color: var(--discord-text-normal);
+    }
+
+    a.channel-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 8px;
+        margin: 1px 0;
+        border-radius: 4px;
+        cursor: pointer;
+        color: var(--discord-text-muted);
+        transition: background-color 0.1s, color 0.1s;
+        text-decoration: none;
+    }
+
+    a.channel-item:hover {
+        background-color: var(--discord-bg-message-hover);
+        color: var(--discord-text-normal);
+        text-decoration: none;
+    }
+
+    a.channel-item.active {
+        background-color: var(--discord-bg-active);
+        color: var(--discord-text-normal);
+    }
+
+    a.server-icon {
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .channel-icon {
+        font-size: 20px !important;
+        opacity: 0.7;
+    }
+
+    .channel-item:hover .channel-icon,
+    .channel-item.active .channel-icon {
+        opacity: 1;
+    }
+
+    .channel-name {
+        font-size: 15px;
+        font-weight: 500;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .main-content {
+        background-color: var(--discord-bg-primary);
+        overflow-y: auto;
+    }
+
+    .mud-layout {
+        display: flex !important;
+        height: 100%;
+    }
+
+    .mud-drawer {
+        width: 240px;
+        min-width: 200px;
+        max-width: 400px;
+        flex-shrink: 0;
+        left: 0 !important; /* Override MudBlazor's offset */
+        top: 0 !important; /* Remove AppBar gap */
+        position: relative !important;
+        height: 100% !important;
+    }
+    
+    .mud-main-content {
+        flex: 1;
+        min-width: 0;
+        margin-left: 0 !important; /* Override MudBlazor's margin */
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100% !important;
+        overflow: hidden !important;
+    }
+    
+    .mud-nav-link {
+        color: var(--discord-text-muted) !important;
+    }
+    
+    .mud-nav-link:hover, .mud-nav-link.active {
+        color: var(--discord-text-normal) !important;
+        background-color: var(--discord-bg-message-hover) !important;
+    }
+</style>
+
+@code {
+    private bool _drawerOpen = true;
+    private List<Guild>? _guilds;
+    private Guild? _selectedGuild;
+    private List<Channel>? _channels;
+    private bool _hasSyncingItems;
+    
+    private string? SelectedGuildId { get; set; }
+    private string? SelectedChannelId { get; set; }
+    
+    private bool IsHome => Navigation.Uri == Navigation.BaseUri;
+    private bool IsSyncPage => Navigation.Uri.Contains("/sync");
+
+    private MudTheme _theme = new MudTheme
+    {
+        PaletteDark = new PaletteDark
+        {
+            Primary = "#5865f2",
+            PrimaryContrastText = "#ffffff",
+            Secondary = "#4e5058",
+            Background = "#313338",
+            Surface = "#2b2d31",
+            DrawerBackground = "#2b2d31",
+            AppbarBackground = "#313338",
+            TextPrimary = "#dbdee1",
+            TextSecondary = "#949ba4",
+            ActionDefault = "#dbdee1",
+            Divider = "#3f4147",
+            LinesDefault = "#3f4147",
+            Success = "#23a559",
+            Warning = "#f0b232",
+            Error = "#f23f43",
+            Info = "#00a8fc"
+        },
+        LayoutProperties = new LayoutProperties
+        {
+            DefaultBorderRadius = "8px"
+        }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadGuilds();
+        await ParseRouteAndLoadData();
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private async Task LoadGuilds()
+    {
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        _guilds = await dbContext.Guilds
+            .OrderBy(g => g.Name)
+            .ToListAsync();
+            
+        _hasSyncingItems = await dbContext.SyncStates
+            .AnyAsync(s => s.Status == DomainSyncStatus.InProgress);
+    }
+
+    private async void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        await InvokeAsync(async () =>
+        {
+            await ParseRouteAndLoadData();
+            StateHasChanged();
+        });
+    }
+
+    private async Task ParseRouteAndLoadData()
+    {
+        var uri = new Uri(Navigation.Uri);
+        var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        
+        if (segments.Length >= 2 && segments[0] == "guild")
+        {
+            var newGuildId = segments[1];
+            var guildChanged = SelectedGuildId != newGuildId;
+            SelectedGuildId = newGuildId;
+            
+            if (segments.Length >= 4 && segments[2] == "channel")
+            {
+                SelectedChannelId = segments[3];
+            }
+            else
+            {
+                SelectedChannelId = null;
+            }
+            
+            // Only reload guild data if guild changed
+            if (guildChanged || _selectedGuild == null)
+            {
+                await LoadGuildData();
+            }
+        }
+        else
+        {
+            SelectedGuildId = null;
+            SelectedChannelId = null;
+            _selectedGuild = null;
+            _channels = null;
+        }
+    }
+
+    private async Task LoadGuildData()
+    {
+        if (SelectedGuildId == null) return;
+        
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        var guildSnowflake = new Snowflake(ulong.Parse(SelectedGuildId));
+        
+        _selectedGuild = await dbContext.Guilds
+            .FirstOrDefaultAsync(g => g.Id == guildSnowflake);
+            
+        _channels = await dbContext.Channels
+            .Where(c => c.GuildId == guildSnowflake)
+            .OrderBy(c => c.Position)
+            .ToListAsync();
+    }
+
+    private void NavigateHome()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    private void SelectGuild(string guildId)
+    {
+        Navigation.NavigateTo($"/guild/{guildId}");
+    }
+
+    private void SelectChannel(string channelId)
+    {
+        Navigation.NavigateTo($"/guild/{SelectedGuildId}/channel/{channelId}");
+    }
+
+    private void NavigateToSync()
+    {
+        Navigation.NavigateTo("/sync");
+    }
+
+    private string GetInitials(string name)
+    {
+        var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length >= 2)
+            return $"{words[0][0]}{words[1][0]}".ToUpper();
+        return name.Length >= 2 ? name[..2].ToUpper() : name.ToUpper();
+    }
+
+    private bool IsNavigableChannel(Channel channel)
+    {
+        // Show channels that can contain messages
+        return channel.Type is ChannelType.Text 
+            or ChannelType.News 
+            or ChannelType.Voice
+            or ChannelType.Forum
+            or ChannelType.Stage
+            or ChannelType.PublicThread
+            or ChannelType.PrivateThread
+            or ChannelType.NewsThread;
+    }
+
+    private string GetChannelIcon(ChannelType type)
+    {
+        return type switch
+        {
+            ChannelType.Text => Icons.Material.Filled.Tag,
+            ChannelType.Voice => Icons.Material.Filled.VolumeUp,
+            ChannelType.News => Icons.Material.Filled.Campaign,
+            ChannelType.Forum => Icons.Material.Filled.Forum,
+            ChannelType.Stage => Icons.Material.Filled.Podcasts,
+            ChannelType.PublicThread or ChannelType.PrivateThread or ChannelType.NewsThread => Icons.Material.Filled.Message,
+            _ => Icons.Material.Filled.Tag
+        };
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}

@@ -1,0 +1,119 @@
+@using System.Text.Json
+@* Discord-style embed card *@
+
+<div class="message-embed" style="border-color: @(Embed.ColorHex ?? "#1f2225");">
+    @if (EmbedData.TryGetProperty("thumbnail", out var thumbnail) && thumbnail.TryGetProperty("url", out var thumbUrl))
+    {
+        <img src="@thumbUrl.GetString()" alt="" class="embed-thumbnail" />
+    }
+    
+    @if (EmbedData.TryGetProperty("author", out var author))
+    {
+        <div class="embed-author">
+            @if (author.TryGetProperty("icon_url", out var authorIcon))
+            {
+                <img src="@authorIcon.GetString()" alt="" class="embed-author-icon" />
+            }
+            @if (author.TryGetProperty("name", out var authorName))
+            {
+                @if (author.TryGetProperty("url", out var authorUrl))
+                {
+                    <a href="@authorUrl.GetString()" target="_blank">@authorName.GetString()</a>
+                }
+                else
+                {
+                    <span>@authorName.GetString()</span>
+                }
+            }
+        </div>
+    }
+    
+    @if (!string.IsNullOrEmpty(Embed.Title))
+    {
+        <div class="embed-title">
+            @if (!string.IsNullOrEmpty(Embed.Url))
+            {
+                <a href="@Embed.Url" target="_blank">@Embed.Title</a>
+            }
+            else
+            {
+                @Embed.Title
+            }
+        </div>
+    }
+    
+    @if (!string.IsNullOrEmpty(Embed.Description))
+    {
+        <div class="embed-description">@((MarkupString)FormatDescription(Embed.Description))</div>
+    }
+    
+    @if (EmbedData.TryGetProperty("fields", out var fields) && fields.ValueKind == JsonValueKind.Array)
+    {
+        <div class="embed-fields">
+            @foreach (var field in fields.EnumerateArray())
+            {
+                var isInline = field.TryGetProperty("inline", out var inline) && inline.GetBoolean();
+                <div class="embed-field @(isInline ? "inline" : "")">
+                    @if (field.TryGetProperty("name", out var fieldName))
+                    {
+                        <div class="embed-field-name">@fieldName.GetString()</div>
+                    }
+                    @if (field.TryGetProperty("value", out var fieldValue))
+                    {
+                        <div class="embed-field-value">@((MarkupString)FormatDescription(fieldValue.GetString() ?? ""))</div>
+                    }
+                </div>
+            }
+        </div>
+    }
+    
+    @if (EmbedData.TryGetProperty("image", out var image) && image.TryGetProperty("url", out var imageUrl))
+    {
+        <a href="@imageUrl.GetString()" target="_blank">
+            <img src="@imageUrl.GetString()" alt="" class="embed-image" loading="lazy" />
+        </a>
+    }
+    
+    @if (EmbedData.TryGetProperty("footer", out var footer) || Embed.Timestamp.HasValue)
+    {
+        <div class="embed-footer">
+            @if (footer.TryGetProperty("icon_url", out var footerIcon))
+            {
+                <img src="@footerIcon.GetString()" alt="" class="embed-footer-icon" />
+            }
+            @if (footer.TryGetProperty("text", out var footerText))
+            {
+                <span>@footerText.GetString()</span>
+            }
+            @if (Embed.Timestamp.HasValue)
+            {
+                @if (footer.ValueKind != JsonValueKind.Undefined)
+                {
+                    <span>•</span>
+                }
+                <span>@Embed.Timestamp.Value.ToLocalTime().ToString("g")</span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public Embed Embed { get; set; } = default!;
+    
+    private JsonElement EmbedData => JsonDocument.Parse(Embed.Data).RootElement;
+    
+    private string FormatDescription(string text)
+    {
+        var escaped = System.Web.HttpUtility.HtmlEncode(text);
+        escaped = escaped.Replace("\n", "<br />");
+        
+        // Basic markdown
+        escaped = System.Text.RegularExpressions.Regex.Replace(escaped, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
+        escaped = System.Text.RegularExpressions.Regex.Replace(escaped, @"\*(.+?)\*", "<em>$1</em>");
+        escaped = System.Text.RegularExpressions.Regex.Replace(escaped, @"`(.+?)`", "<code>$1</code>");
+        escaped = System.Text.RegularExpressions.Regex.Replace(escaped, @"(https?://[^\s<]+)", "<a href=\"$1\" target=\"_blank\">$1</a>");
+        
+        return escaped;
+    }
+}

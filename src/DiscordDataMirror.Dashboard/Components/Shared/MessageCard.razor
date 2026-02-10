@@ -1,0 +1,131 @@
+@* Discord-style message card component *@
+
+<div class="message-container @(ShowHeader ? "has-header" : "")">
+    @if (ShowHeader)
+    {
+        <div class="message-avatar">
+            @if (!string.IsNullOrEmpty(Message.Author?.AvatarUrl))
+            {
+                <img src="@Message.Author.AvatarUrl" alt="@DisplayName" />
+            }
+            else
+            {
+                <span class="initials">@GetInitials(DisplayName)</span>
+            }
+        </div>
+    }
+    else
+    {
+        <div style="width: 56px; flex-shrink: 0;"></div>
+    }
+    
+    <div class="message-content-wrapper">
+        @if (ShowHeader)
+        {
+            <div class="message-header">
+                <span class="message-author @(Message.Author?.IsBot == true ? "bot" : "")">
+                    @DisplayName
+                    @if (Message.Author?.IsBot == true)
+                    {
+                        <span class="bot-tag">BOT</span>
+                    }
+                </span>
+                <span class="message-timestamp">@FormatTimestamp(Message.Timestamp)</span>
+            </div>
+        }
+        
+        <div class="message-body">
+            @if (!string.IsNullOrEmpty(Message.Content))
+            {
+                @((MarkupString)FormatContent(Message.Content))
+            }
+            @if (Message.EditedTimestamp.HasValue)
+            {
+                <span class="message-edited">(edited)</span>
+            }
+        </div>
+        
+        @* Attachments *@
+        @if (Message.Attachments.Any())
+        {
+            <div class="message-attachments">
+                @foreach (var attachment in Message.Attachments)
+                {
+                    <AttachmentPreview Attachment="attachment" />
+                }
+            </div>
+        }
+        
+        @* Embeds *@
+        @if (Message.Embeds.Any())
+        {
+            @foreach (var embed in Message.Embeds.OrderBy(e => e.Index))
+            {
+                <EmbedCard Embed="embed" />
+            }
+        }
+        
+        @* Reactions *@
+        @if (Message.Reactions.Any())
+        {
+            <div class="message-reactions">
+                @foreach (var reaction in Message.Reactions)
+                {
+                    <ReactionBadge Reaction="reaction" />
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public Message Message { get; set; } = default!;
+    
+    [Parameter]
+    public bool ShowHeader { get; set; } = true;
+    
+    private string DisplayName => Message.Author?.DisplayName ?? "Unknown User";
+    
+    private string GetInitials(string name)
+    {
+        var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length >= 2)
+            return $"{words[0][0]}{words[1][0]}".ToUpper();
+        return name.Length >= 2 ? name[..2].ToUpper() : name.ToUpper();
+    }
+    
+    private string FormatTimestamp(DateTime timestamp)
+    {
+        var local = timestamp.ToLocalTime();
+        var today = DateTime.Today;
+        var yesterday = today.AddDays(-1);
+        
+        if (local.Date == today)
+            return $"Today at {local:h:mm tt}";
+        if (local.Date == yesterday)
+            return $"Yesterday at {local:h:mm tt}";
+        return local.ToString("MM/dd/yyyy h:mm tt");
+    }
+    
+    private string FormatContent(string content)
+    {
+        // Basic formatting - escape HTML and handle newlines
+        var escaped = System.Web.HttpUtility.HtmlEncode(content);
+        escaped = escaped.Replace("\n", "<br />");
+        
+        // Handle Discord markdown (basic)
+        // Bold
+        escaped = System.Text.RegularExpressions.Regex.Replace(escaped, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
+        // Italic
+        escaped = System.Text.RegularExpressions.Regex.Replace(escaped, @"\*(.+?)\*", "<em>$1</em>");
+        // Strikethrough
+        escaped = System.Text.RegularExpressions.Regex.Replace(escaped, @"~~(.+?)~~", "<del>$1</del>");
+        // Inline code
+        escaped = System.Text.RegularExpressions.Regex.Replace(escaped, @"`(.+?)`", "<code>$1</code>");
+        // Links
+        escaped = System.Text.RegularExpressions.Regex.Replace(escaped, @"(https?://[^\s<]+)", "<a href=\"$1\" target=\"_blank\">$1</a>");
+        
+        return escaped;
+    }
+}

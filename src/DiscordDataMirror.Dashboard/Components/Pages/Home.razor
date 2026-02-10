@@ -1,0 +1,298 @@
+@page "/"
+@using DiscordDataMirror.Dashboard.Services
+@using DiscordDataMirror.Application.Events
+@inject IDbContextFactory<DiscordMirrorDbContext> DbContextFactory
+@inject SyncHubConnection HubConnection
+@inject ISnackbar Snackbar
+@implements IAsyncDisposable
+@rendermode InteractiveServer
+
+<PageTitle>Discord Data Mirror</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Discord Data Mirror</h1>
+        <p class="page-subtitle">Your Discord server archive and analytics dashboard</p>
+    </div>
+</div>
+
+<div class="pa-6">
+    @* Overview stats *@
+    <MudGrid Spacing="3" Class="mb-6">
+        <MudItem xs="12" sm="6" md="3">
+            <StatsCard Icon="@Icons.Material.Filled.Dns" 
+                       Value="@_stats.GuildCount.ToString("N0")" 
+                       Label="Servers" 
+                       IconClass="primary" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatsCard Icon="@Icons.Material.Filled.Tag" 
+                       Value="@_stats.ChannelCount.ToString("N0")" 
+                       Label="Channels" 
+                       IconClass="success" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatsCard Icon="@Icons.Material.Filled.Message" 
+                       Value="@FormatNumber(_stats.MessageCount)" 
+                       Label="Messages" 
+                       IconClass="warning" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <StatsCard Icon="@Icons.Material.Filled.People" 
+                       Value="@_stats.UserCount.ToString("N0")" 
+                       Label="Users" 
+                       IconClass="error" />
+        </MudItem>
+    </MudGrid>
+
+    @* Server grid *@
+    <MudText Typo="Typo.h5" Class="mb-4" Style="color: var(--discord-text-header);">
+        Synced Servers
+    </MudText>
+
+    @if (_guilds == null)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (!_guilds.Any())
+    {
+        <div class="empty-state">
+            <MudIcon Icon="@Icons.Material.Filled.CloudOff" Size="Size.Large" 
+                     Style="font-size: 64px; color: var(--discord-text-muted);" />
+            <div class="empty-state-title">No servers synced yet</div>
+            <div class="empty-state-description">
+                Start the bot and join some servers to begin archiving Discord data.
+            </div>
+        </div>
+    }
+    else
+    {
+        <MudGrid Spacing="3">
+            @foreach (var guild in _guilds)
+            {
+                <MudItem xs="12" sm="6" md="4" lg="3">
+                    <MudCard Elevation="0" Style="background-color: var(--discord-bg-secondary); cursor: pointer;"
+                             @onclick="() => NavigateToGuild(guild.Id.ToString())">
+                        <MudCardHeader>
+                            <CardHeaderAvatar>
+                                <MudAvatar Size="Size.Large" Color="Color.Primary">
+                                    @if (!string.IsNullOrEmpty(guild.IconUrl))
+                                    {
+                                        <MudImage Src="@guild.IconUrl" Alt="@guild.Name" />
+                                    }
+                                    else
+                                    {
+                                        @GetInitials(guild.Name)
+                                    }
+                                </MudAvatar>
+                            </CardHeaderAvatar>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6" Style="color: var(--discord-text-header);">
+                                    @guild.Name
+                                </MudText>
+                                <MudText Typo="Typo.body2" Style="color: var(--discord-text-muted);">
+                                    @(_guildStats.TryGetValue(guild.Id.ToString(), out var stats) 
+                                        ? $"{stats.ChannelCount} channels • {FormatNumber(stats.MessageCount)} messages" 
+                                        : "Loading...")
+                                </MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            @if (!string.IsNullOrEmpty(guild.Description))
+                            {
+                                <MudText Typo="Typo.body2" Style="color: var(--discord-text-normal);" Class="mb-2">
+                                    @(guild.Description.Length > 100 ? guild.Description[..100] + "..." : guild.Description)
+                                </MudText>
+                            }
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                @if (guild.LastSyncedAt.HasValue)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">
+                                        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="mr-1" />
+                                        Synced @FormatTimeAgo(guild.LastSyncedAt.Value)
+                                    </MudChip>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text">
+                                        Never synced
+                                    </MudChip>
+                                }
+                            </div>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</div>
+
+@code {
+    private List<Guild>? _guilds;
+    private DashboardStats _stats = new();
+    private Dictionary<string, GuildStats> _guildStats = new();
+    private bool _isLoading;
+
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+        await SetupSignalR();
+    }
+
+    private async Task SetupSignalR()
+    {
+        try
+        {
+            await HubConnection.StartAsync();
+            
+            HubConnection.OnGuildSynced += OnGuildSynced;
+            HubConnection.OnMessageReceived += OnMessageReceived;
+            HubConnection.OnSyncProgress += OnSyncProgress;
+            HubConnection.OnSyncError += OnSyncError;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to connect to real-time updates: {ex.Message}", Severity.Warning);
+        }
+    }
+
+    private async Task OnGuildSynced(GuildSyncedEvent evt)
+    {
+        Snackbar.Add($"Guild '{evt.GuildName}' synced successfully", Severity.Success);
+        await LoadData();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnMessageReceived(MessageReceivedEvent evt)
+    {
+        // Update message count for the guild
+        if (_guildStats.TryGetValue(evt.GuildId, out var stats))
+        {
+            stats.MessageCount++;
+            _stats.MessageCount++;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task OnSyncProgress(SyncProgressEvent evt)
+    {
+        // Update guild's last synced time in UI
+        var guild = _guilds?.FirstOrDefault(g => g.Id.ToString() == evt.GuildId);
+        if (guild != null && evt.Status == "Completed")
+        {
+            // Refresh data when sync completes
+            await LoadData();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task OnSyncError(SyncErrorEvent evt)
+    {
+        Snackbar.Add($"Sync error for {evt.GuildName ?? "guild"}: {evt.ErrorMessage}", Severity.Error);
+        await Task.CompletedTask;
+    }
+
+    private async Task LoadData()
+    {
+        if (_isLoading) return;
+        _isLoading = true;
+        
+        try
+        {
+            await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+            
+            _guilds = await dbContext.Guilds
+                .OrderBy(g => g.Name)
+                .ToListAsync();
+
+            _stats = new DashboardStats
+            {
+                GuildCount = await dbContext.Guilds.CountAsync(),
+                ChannelCount = await dbContext.Channels.CountAsync(),
+                MessageCount = await dbContext.Messages.LongCountAsync(),
+                UserCount = await dbContext.Users.CountAsync()
+            };
+
+            // Load per-guild stats
+            foreach (var guild in _guilds)
+            {
+                var guildId = guild.Id;
+                var channelCount = await dbContext.Channels.CountAsync(c => c.GuildId == guildId);
+                var channelIds = await dbContext.Channels
+                    .Where(c => c.GuildId == guildId)
+                    .Select(c => c.Id)
+                    .ToListAsync();
+                var messageCount = await dbContext.Messages
+                    .Where(m => channelIds.Contains(m.ChannelId))
+                    .LongCountAsync();
+                    
+                _guildStats[guild.Id.ToString()] = new GuildStats
+                {
+                    ChannelCount = channelCount,
+                    MessageCount = messageCount
+                };
+            }
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void NavigateToGuild(string guildId)
+    {
+        Navigation.NavigateTo($"/guild/{guildId}");
+    }
+
+    private string GetInitials(string name)
+    {
+        var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length >= 2)
+            return $"{words[0][0]}{words[1][0]}".ToUpper();
+        return name.Length >= 2 ? name[..2].ToUpper() : name.ToUpper();
+    }
+
+    private string FormatNumber(long number)
+    {
+        if (number >= 1_000_000)
+            return $"{number / 1_000_000.0:0.#}M";
+        if (number >= 1_000)
+            return $"{number / 1_000.0:0.#}K";
+        return number.ToString("N0");
+    }
+
+    private string FormatTimeAgo(DateTime dt)
+    {
+        var span = DateTime.UtcNow - dt;
+        if (span.TotalMinutes < 1) return "just now";
+        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes}m ago";
+        if (span.TotalHours < 24) return $"{(int)span.TotalHours}h ago";
+        if (span.TotalDays < 7) return $"{(int)span.TotalDays}d ago";
+        return dt.ToLocalTime().ToString("MMM d");
+    }
+
+    private class DashboardStats
+    {
+        public int GuildCount { get; set; }
+        public int ChannelCount { get; set; }
+        public long MessageCount { get; set; }
+        public int UserCount { get; set; }
+    }
+
+    private class GuildStats
+    {
+        public int ChannelCount { get; set; }
+        public long MessageCount { get; set; }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        HubConnection.OnGuildSynced -= OnGuildSynced;
+        HubConnection.OnMessageReceived -= OnMessageReceived;
+        HubConnection.OnSyncProgress -= OnSyncProgress;
+        HubConnection.OnSyncError -= OnSyncError;
+        await Task.CompletedTask;
+    }
+}

@@ -1,0 +1,25 @@
+@* Stats card component *@
+
+<div class="stat-card">
+    <div class="stat-icon @IconClass">
+        <MudIcon Icon="@Icon" Size="Size.Large" />
+    </div>
+    <div class="stat-content">
+        <div class="stat-value">@Value</div>
+        <div class="stat-label">@Label</div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Icon { get; set; } = Icons.Material.Filled.Info;
+    
+    [Parameter, EditorRequired]
+    public string Value { get; set; } = "0";
+    
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = "";
+    
+    [Parameter]
+    public string IconClass { get; set; } = "primary";
+}

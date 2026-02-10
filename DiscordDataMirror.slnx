@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DiscordDataMirror.AppHost/DiscordDataMirror.AppHost.csproj" />
+    <Project Path="src/DiscordDataMirror.Application/DiscordDataMirror.Application.csproj" />
+    <Project Path="src/DiscordDataMirror.Bot/DiscordDataMirror.Bot.csproj" />
+    <Project Path="src/DiscordDataMirror.Dashboard/DiscordDataMirror.Dashboard.csproj" />
+    <Project Path="src/DiscordDataMirror.Domain/DiscordDataMirror.Domain.csproj" />
+    <Project Path="src/DiscordDataMirror.Infrastructure/DiscordDataMirror.Infrastructure.csproj" />
+    <Project Path="src/DiscordDataMirror.ServiceDefaults/DiscordDataMirror.ServiceDefaults.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DiscordDataMirror.Dashboard.Tests/DiscordDataMirror.Dashboard.Tests.csproj" />
+  </Folder>
+</Solution>
