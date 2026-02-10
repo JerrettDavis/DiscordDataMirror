@@ -1,0 +1,173 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.1.0)'
+        required: true
+
+env:
+  REGISTRY: ghcr.io
+  DOTNET_VERSION: '10.0.x'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-and-push:
+    name: Build & Push Docker Images
+    runs-on: ubuntu-latest
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and restore solution
+        run: dotnet restore DiscordDataMirror.slnx
+
+      - name: Publish Bot
+        run: |
+          dotnet publish src/DiscordDataMirror.Bot/DiscordDataMirror.Bot.csproj \
+            --configuration Release \
+            --output ./publish/bot \
+            -p:PublishSingleFile=false \
+            -p:Version=${{ steps.version.outputs.version }}
+
+      - name: Publish Dashboard
+        run: |
+          dotnet publish src/DiscordDataMirror.Dashboard/DiscordDataMirror.Dashboard.csproj \
+            --configuration Release \
+            --output ./publish/dashboard \
+            -p:PublishSingleFile=false \
+            -p:Version=${{ steps.version.outputs.version }}
+
+      - name: Build and push Bot image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./publish/bot
+          file: ./src/DiscordDataMirror.Bot/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/discorddatamirror-bot:${{ steps.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/discorddatamirror-bot:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Build and push Dashboard image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./publish/dashboard
+          file: ./src/DiscordDataMirror.Dashboard/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/discorddatamirror-dashboard:${{ steps.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/discorddatamirror-dashboard:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build-and-push
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          VERSION="v${{ needs.build-and-push.outputs.version }}"
+          
+          # Get previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [ -n "$PREV_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"- %s (%h)" $PREV_TAG..HEAD)
+          else
+            COMMITS=$(git log --pretty=format:"- %s (%h)" --max-count=50)
+          fi
+          
+          # Write to file for multiline output
+          cat << EOF > release-notes.md
+          ## What's Changed
+          
+          $COMMITS
+          
+          ## Docker Images
+          
+          \`\`\`bash
+          # Bot
+          docker pull ghcr.io/${{ github.repository_owner }}/discorddatamirror-bot:${{ needs.build-and-push.outputs.version }}
+          
+          # Dashboard
+          docker pull ghcr.io/${{ github.repository_owner }}/discorddatamirror-dashboard:${{ needs.build-and-push.outputs.version }}
+          \`\`\`
+          
+          ## Quick Start
+          
+          1. Copy \`publish/.env.example\` to \`publish/.env\`
+          2. Configure your Discord token and database password
+          3. Update image versions in docker-compose or set environment variables:
+             \`\`\`bash
+             export BOT_IMAGE=ghcr.io/${{ github.repository_owner }}/discorddatamirror-bot:${{ needs.build-and-push.outputs.version }}
+             export DASHBOARD_IMAGE=ghcr.io/${{ github.repository_owner }}/discorddatamirror-dashboard:${{ needs.build-and-push.outputs.version }}
+             \`\`\`
+          4. Run \`docker compose up -d\`
+          EOF
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.build-and-push.outputs.version }}
+          name: Release v${{ needs.build-and-push.outputs.version }}
+          body_path: release-notes.md
+          draft: false
+          prerelease: ${{ contains(needs.build-and-push.outputs.version, '-') }}
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
