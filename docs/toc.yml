@@ -17,7 +17,7 @@
     - name: Development Guide
       href: DEVELOPMENT.md
     - name: Architecture
-      href: ../ARCHITECTURE.md
+      href: https://github.com/JerrettDavis/DiscordDataMirror/blob/main/ARCHITECTURE.md
     - name: Contributing
       href: guides/contributing.md
 - name: Support
@@ -27,4 +27,4 @@
     - name: Troubleshooting
       href: guides/troubleshooting.md
 - name: API Reference
-  href: api/
+  href: api/index.md
