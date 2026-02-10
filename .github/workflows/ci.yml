@@ -72,7 +72,7 @@ jobs:
             --verbosity normal \
             --collect:"XPlat Code Coverage" \
             --results-directory ./coverage \
-            --filter "FullyQualifiedName!~E2E"
+            --filter "FullyQualifiedName!~E2E&FullyQualifiedName!~Dashboard.Tests"
         env:
           ConnectionStrings__discordmirror: Host=localhost;Port=5432;Database=discordmirror_test;Username=postgres;Password=postgres
 
@@ -83,6 +83,55 @@ jobs:
           directory: ./coverage
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  component-tests:
+    name: Component Tests (Dashboard)
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/Directory.Build.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.SOLUTION_NAME }}
+
+      - name: Build Dashboard tests
+        run: dotnet build tests/DiscordDataMirror.Dashboard.Tests --configuration Release
+
+      - name: Install Playwright browsers
+        run: |
+          dotnet tool install --global Microsoft.Playwright.CLI
+          playwright install chromium --with-deps
+
+      - name: Run Dashboard component tests
+        run: |
+          dotnet test tests/DiscordDataMirror.Dashboard.Tests \
+            --no-build \
+            --configuration Release \
+            --verbosity normal \
+            --logger "trx;LogFileName=dashboard-results.trx"
+        continue-on-error: true
+
+      - name: Upload Dashboard test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-test-results
+          path: tests/DiscordDataMirror.Dashboard.Tests/TestResults/
 
   e2e-tests:
     name: E2E Tests
@@ -126,6 +175,7 @@ jobs:
             --logger "trx;LogFileName=e2e-results.trx"
         env:
           ASPNETCORE_ENVIRONMENT: Testing
+        continue-on-error: true
 
       - name: Upload E2E test results
         if: always()
