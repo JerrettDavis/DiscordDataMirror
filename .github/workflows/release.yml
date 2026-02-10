@@ -27,6 +27,7 @@ jobs:
 
     outputs:
       version: ${{ steps.version.outputs.version }}
+      image_prefix: ${{ steps.version.outputs.image_prefix }}
 
     steps:
       - name: Checkout code
@@ -34,7 +35,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Determine version
+      - name: Determine version and image prefix
         id: version
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
@@ -44,6 +45,11 @@ jobs:
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
+          
+          # Docker tags must be lowercase
+          IMAGE_PREFIX=$(echo "${{ env.REGISTRY }}/${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "image_prefix=$IMAGE_PREFIX" >> $GITHUB_OUTPUT
+          echo "Image prefix: $IMAGE_PREFIX"
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -86,8 +92,8 @@ jobs:
           file: ./src/DiscordDataMirror.Bot/Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/discorddatamirror-bot:${{ steps.version.outputs.version }}
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/discorddatamirror-bot:latest
+            ${{ steps.version.outputs.image_prefix }}/discorddatamirror-bot:${{ steps.version.outputs.version }}
+            ${{ steps.version.outputs.image_prefix }}/discorddatamirror-bot:latest
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.version=${{ steps.version.outputs.version }}
@@ -100,8 +106,8 @@ jobs:
           file: ./src/DiscordDataMirror.Dashboard/Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/discorddatamirror-dashboard:${{ steps.version.outputs.version }}
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/discorddatamirror-dashboard:latest
+            ${{ steps.version.outputs.image_prefix }}/discorddatamirror-dashboard:${{ steps.version.outputs.version }}
+            ${{ steps.version.outputs.image_prefix }}/discorddatamirror-dashboard:latest
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.version=${{ steps.version.outputs.version }}
@@ -132,6 +138,9 @@ jobs:
             COMMITS=$(git log --pretty=format:"- %s (%h)" --max-count=50)
           fi
           
+          IMAGE_PREFIX="${{ needs.build-and-push.outputs.image_prefix }}"
+          VERSION="${{ needs.build-and-push.outputs.version }}"
+          
           # Write to file for multiline output
           cat << EOF > release-notes.md
           ## What's Changed
@@ -142,10 +151,10 @@ jobs:
           
           \`\`\`bash
           # Bot
-          docker pull ghcr.io/${{ github.repository_owner }}/discorddatamirror-bot:${{ needs.build-and-push.outputs.version }}
+          docker pull ${IMAGE_PREFIX}/discorddatamirror-bot:${VERSION}
           
           # Dashboard
-          docker pull ghcr.io/${{ github.repository_owner }}/discorddatamirror-dashboard:${{ needs.build-and-push.outputs.version }}
+          docker pull ${IMAGE_PREFIX}/discorddatamirror-dashboard:${VERSION}
           \`\`\`
           
           ## Quick Start
@@ -154,8 +163,8 @@ jobs:
           2. Configure your Discord token and database password
           3. Update image versions in docker-compose or set environment variables:
              \`\`\`bash
-             export BOT_IMAGE=ghcr.io/${{ github.repository_owner }}/discorddatamirror-bot:${{ needs.build-and-push.outputs.version }}
-             export DASHBOARD_IMAGE=ghcr.io/${{ github.repository_owner }}/discorddatamirror-dashboard:${{ needs.build-and-push.outputs.version }}
+             export BOT_IMAGE=${IMAGE_PREFIX}/discorddatamirror-bot:${VERSION}
+             export DASHBOARD_IMAGE=${IMAGE_PREFIX}/discorddatamirror-dashboard:${VERSION}
              \`\`\`
           4. Run \`docker compose up -d\`
           EOF
