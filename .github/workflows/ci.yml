@@ -113,9 +113,9 @@ jobs:
         run: dotnet build tests/DiscordDataMirror.Dashboard.Tests --configuration Release
 
       - name: Install Playwright browsers
+        working-directory: tests/DiscordDataMirror.Dashboard.Tests
         run: |
-          dotnet tool install --global Microsoft.Playwright.CLI
-          playwright install chromium --with-deps
+          pwsh bin/Release/net10.0/playwright.ps1 install chromium --with-deps
 
       - name: Run Dashboard component tests
         run: |
@@ -162,9 +162,9 @@ jobs:
         run: dotnet build tests/DiscordDataMirror.E2E.Tests --configuration Release
 
       - name: Install Playwright browsers
+        working-directory: tests/DiscordDataMirror.E2E.Tests
         run: |
-          dotnet tool install --global Microsoft.Playwright.CLI
-          playwright install chromium --with-deps
+          pwsh bin/Release/net10.0/playwright.ps1 install chromium --with-deps
 
       - name: Run E2E tests
         run: |
