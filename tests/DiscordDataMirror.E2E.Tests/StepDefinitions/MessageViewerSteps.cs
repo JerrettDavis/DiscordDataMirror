@@ -23,7 +23,7 @@ public class MessageViewerSteps(ScenarioContext scenarioContext)
     {
         // Wait for messages to load
         await Task.Delay(1000);
-        
+
         // Look for message containers
         var messages = await Page.Locator(".message-group, [class*='message'], .message-card").CountAsync();
         Assert.True(messages > 0, "Should see at least one message");

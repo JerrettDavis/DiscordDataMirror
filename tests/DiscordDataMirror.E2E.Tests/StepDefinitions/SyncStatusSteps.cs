@@ -21,7 +21,7 @@ public class SyncStatusSteps(ScenarioContext scenarioContext)
             var text = await tab.TextContentAsync();
             tabTexts.Add(text ?? "");
         }
-        
+
         Assert.Contains(tabTexts, t => t.Contains(tabName, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -88,7 +88,7 @@ public class SyncStatusSteps(ScenarioContext scenarioContext)
         // Find the guild section and click the button within it
         var guildSection = Page.Locator(".mud-paper").Filter(new() { HasText = guildName });
         var button = guildSection.Locator("button").Filter(new() { HasText = buttonText });
-        
+
         if (await button.CountAsync() > 0)
         {
             await button.First.ClickAsync();

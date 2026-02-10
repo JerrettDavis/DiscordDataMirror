@@ -82,10 +82,10 @@ public class TestWebApplicationFactory : WebApplicationFactory<DiscordDataMirror
             var sp = services.BuildServiceProvider();
             using var scope = sp.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<DiscordMirrorDbContext>();
-            
+
             // Create database schema
             context.Database.EnsureCreated();
-            
+
             // Seed test data
             TestDataSeeder.SeedAsync(context).GetAwaiter().GetResult();
         });

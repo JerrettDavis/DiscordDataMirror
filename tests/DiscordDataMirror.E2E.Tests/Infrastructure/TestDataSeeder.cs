@@ -12,18 +12,18 @@ public static class TestDataSeeder
 {
     public static readonly Snowflake TestGuildId1 = new Snowflake(123456789012345678ul);
     public static readonly Snowflake TestGuildId2 = new Snowflake(223456789012345678ul);
-    
+
     public static readonly Snowflake TestChannelId1 = new Snowflake(111111111111111111ul);
     public static readonly Snowflake TestChannelId2 = new Snowflake(222222222222222222ul);
     public static readonly Snowflake TestChannelId3 = new Snowflake(333333333333333333ul);
     public static readonly Snowflake TestCategoryId1 = new Snowflake(444444444444444444ul);
     public static readonly Snowflake TestVoiceChannelId = new Snowflake(555555555555555555ul);
-    
+
     public static readonly Snowflake TestUserId1 = new Snowflake(999999999999999991ul);
     public static readonly Snowflake TestUserId2 = new Snowflake(999999999999999992ul);
     public static readonly Snowflake TestUserId3 = new Snowflake(999999999999999993ul);
     public static readonly Snowflake TestBotUserId = new Snowflake(999999999999999999ul);
-    
+
     public static readonly Snowflake TestRoleId1 = new Snowflake(888888888888888881ul);
     public static readonly Snowflake TestRoleId2 = new Snowflake(888888888888888882ul);
     public static readonly Snowflake TestRoleId3 = new Snowflake(888888888888888883ul);
@@ -214,7 +214,7 @@ public static class TestDataSeeder
             var authorIndex = random.Next(users.Count);
             var content = messageContents[random.Next(messageContents.Length)];
             var timestamp = baseTime.AddMinutes(i * 15);
-            
+
             var message = new Message(
                 new Snowflake(messageId++),
                 TestChannelId1,
@@ -239,7 +239,7 @@ public static class TestDataSeeder
         {
             var content = announcementContents[i % announcementContents.Length];
             var timestamp = baseTime.AddHours(i * 12);
-            
+
             var message = new Message(
                 new Snowflake(messageId++),
                 TestChannelId2,
@@ -256,7 +256,7 @@ public static class TestDataSeeder
             var authorIndex = random.Next(users.Count);
             var content = $"Random message #{i + 1}: {messageContents[random.Next(messageContents.Length)]}";
             var timestamp = baseTime.AddMinutes(i * 30);
-            
+
             var message = new Message(
                 new Snowflake(messageId++),
                 TestChannelId3,
@@ -285,7 +285,7 @@ public static class TestDataSeeder
     private static SyncState CreateSyncState(string entityType, string entityId, SyncStatus status)
     {
         var state = new SyncState(entityType, entityId);
-        
+
         switch (status)
         {
             case SyncStatus.InProgress:
@@ -300,7 +300,7 @@ public static class TestDataSeeder
                 state.FailSync("Test error message");
                 break;
         }
-        
+
         return state;
     }
 }

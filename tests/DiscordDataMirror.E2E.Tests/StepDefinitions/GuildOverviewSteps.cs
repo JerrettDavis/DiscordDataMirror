@@ -45,7 +45,7 @@ public class GuildOverviewSteps(ScenarioContext scenarioContext)
             var text = await chip.TextContentAsync();
             roleTexts.Add(text ?? "");
         }
-        
+
         Assert.Contains(roleTexts, t => t.Contains(roleName, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -64,7 +64,7 @@ public class GuildOverviewSteps(ScenarioContext scenarioContext)
         // Find the button near the Channels heading
         var channelsSection = Page.Locator("text=Channels").Locator("../..");
         var button = channelsSection.Locator($"a, button").Filter(new() { HasText = buttonText });
-        
+
         if (await button.CountAsync() > 0)
         {
             await button.First.ClickAsync();
@@ -75,7 +75,7 @@ public class GuildOverviewSteps(ScenarioContext scenarioContext)
             var viewAllButton = Page.Locator($"a[href*='/channels'], button").Filter(new() { HasText = buttonText });
             await viewAllButton.First.ClickAsync();
         }
-        
+
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await Task.Delay(500);
     }
@@ -86,7 +86,7 @@ public class GuildOverviewSteps(ScenarioContext scenarioContext)
         // Find the button near the Members heading
         var membersSection = Page.Locator("text=Members").Locator("../..");
         var button = membersSection.Locator($"a, button").Filter(new() { HasText = buttonText });
-        
+
         if (await button.CountAsync() > 0)
         {
             await button.First.ClickAsync();
@@ -97,7 +97,7 @@ public class GuildOverviewSteps(ScenarioContext scenarioContext)
             var viewAllButton = Page.Locator($"a[href*='/members'], button").Filter(new() { HasText = buttonText });
             await viewAllButton.First.ClickAsync();
         }
-        
+
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await Task.Delay(500);
     }

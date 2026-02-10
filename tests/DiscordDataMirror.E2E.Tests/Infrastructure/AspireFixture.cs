@@ -12,19 +12,19 @@ public class AspireFixture : IAsyncLifetime
     private HttpClient? _client;
 
     public string DashboardUrl { get; private set; } = string.Empty;
-    
+
     public HttpClient Client => _client ?? throw new InvalidOperationException("Client not initialized");
 
     public async Task InitializeAsync()
     {
         _factory = new TestWebApplicationFactory();
-        
+
         // Create the client (this also starts the server)
         _client = _factory.CreateClient();
-        
+
         // The factory's server is automatically started
         DashboardUrl = _client.BaseAddress?.ToString().TrimEnd('/') ?? "http://localhost";
-        
+
         // Give the server a moment to fully initialize
         await Task.Delay(TimeSpan.FromSeconds(2));
     }
@@ -32,7 +32,7 @@ public class AspireFixture : IAsyncLifetime
     public async Task DisposeAsync()
     {
         _client?.Dispose();
-        
+
         if (_factory is not null)
         {
             await _factory.DisposeAsync();

@@ -92,7 +92,7 @@ public class MemberListSteps(ScenarioContext scenarioContext)
         var roleSelect = Page.Locator("label:has-text('Role')").Locator("..").Locator("input, .mud-select");
         await roleSelect.First.ClickAsync();
         await Task.Delay(300);
-        
+
         var roleOption = Page.Locator(".mud-popover-open .mud-list-item, .mud-select-input").Filter(new() { HasText = roleName });
         if (await roleOption.CountAsync() > 0)
         {
@@ -114,7 +114,7 @@ public class MemberListSteps(ScenarioContext scenarioContext)
         var sortSelect = Page.Locator("label:has-text('Sort')").Locator("..").Locator("input, .mud-select");
         await sortSelect.First.ClickAsync();
         await Task.Delay(300);
-        
+
         var option = Page.Locator(".mud-popover-open .mud-list-item").Filter(new() { HasText = sortOption });
         if (await option.CountAsync() > 0)
         {

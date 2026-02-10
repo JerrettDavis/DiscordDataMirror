@@ -126,7 +126,7 @@ public class ChannelBrowserSteps(ScenarioContext scenarioContext)
             var text = await channel.TextContentAsync();
             channelTexts.Add(text ?? "");
         }
-        
+
         // Check that the channel is not visible (or filtered out)
         var visible = channelTexts.Any(t => t.Contains(channelName, StringComparison.OrdinalIgnoreCase));
         // Note: This might pass if the element is simply not in the current view

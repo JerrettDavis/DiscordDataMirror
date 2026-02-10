@@ -16,7 +16,7 @@ public class DashboardSteps(ScenarioContext scenarioContext)
     {
         // Wait for server cards to load
         await Page.WaitForSelectorAsync(".mud-card", new() { Timeout = 10000 });
-        
+
         var cards = await Page.Locator(".mud-card").AllAsync();
         var cardTexts = new List<string>();
         foreach (var card in cards)
@@ -24,7 +24,7 @@ public class DashboardSteps(ScenarioContext scenarioContext)
             var text = await card.TextContentAsync();
             cardTexts.Add(text ?? "");
         }
-        
+
         Assert.Contains(cardTexts, t => t.Contains(serverName, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -33,11 +33,11 @@ public class DashboardSteps(ScenarioContext scenarioContext)
     {
         var card = Page.Locator(".mud-card").Filter(new() { HasText = serverName });
         var cardContent = await card.TextContentAsync();
-        
+
         // Check for sync-related content (Synced, Never synced, etc.)
         var hasSyncStatus = cardContent?.Contains("Synced", StringComparison.OrdinalIgnoreCase) == true ||
                            cardContent?.Contains("Never", StringComparison.OrdinalIgnoreCase) == true;
-        
+
         Assert.True(hasSyncStatus, $"Server card '{serverName}' should display sync status");
     }
 
@@ -54,7 +54,7 @@ public class DashboardSteps(ScenarioContext scenarioContext)
     public async Task ThenIShouldBeOnTheGuildOverviewPageFor(string serverName)
     {
         Assert.Contains("/guild/", Page.Url, StringComparison.OrdinalIgnoreCase);
-        
+
         var pageContent = await Page.ContentAsync();
         Assert.Contains(serverName, pageContent, StringComparison.OrdinalIgnoreCase);
     }
