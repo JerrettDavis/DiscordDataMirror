@@ -1,0 +1,61 @@
+<svg width="800" height="500" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="500" fill="#36393f"/>
+  
+  <!-- Header -->
+  <rect x="0" y="0" width="800" height="48" fill="#2f3136"/>
+  <text x="25" y="30" fill="white" font-family="Arial" font-size="16" font-weight="bold"># general</text>
+  <text x="120" y="30" fill="#888" font-family="Arial" font-size="13">| The main chat for general discussion</text>
+  
+  <!-- Search bar -->
+  <rect x="550" y="10" width="230" height="28" rx="4" fill="#202225"/>
+  <text x="565" y="29" fill="#666" font-family="Arial" font-size="12">🔍 Search in channel</text>
+  
+  <!-- Messages area -->
+  <!-- Date divider -->
+  <line x1="50" y1="80" x2="350" y2="80" stroke="#40444b" stroke-width="1"/>
+  <text x="400" y="85" fill="#888" font-family="Arial" font-size="12" text-anchor="middle">February 10, 2026</text>
+  <line x1="450" y1="80" x2="750" y2="80" stroke="#40444b" stroke-width="1"/>
+  
+  <!-- Message 1 -->
+  <circle cx="45" cy="130" r="20" fill="#5865F2"/>
+  <text x="38" y="136" fill="white" font-family="Arial" font-size="14" font-weight="bold">A</text>
+  <text x="75" y="120" fill="#fff" font-family="Arial" font-size="14" font-weight="bold">Alice</text>
+  <text x="120" y="120" fill="#888" font-family="Arial" font-size="11">Today at 3:45 PM</text>
+  <text x="75" y="142" fill="#dcddde" font-family="Arial" font-size="14">Hey everyone! Just wanted to share this amazing article I found 📚</text>
+  
+  <!-- Link embed -->
+  <rect x="75" y="155" width="400" height="80" rx="4" fill="#2f3136" stroke="#202225" stroke-width="1"/>
+  <rect x="75" y="155" width="4" height="80" fill="#5865F2"/>
+  <text x="95" y="180" fill="#00aff4" font-family="Arial" font-size="13">example.com</text>
+  <text x="95" y="200" fill="#fff" font-family="Arial" font-size="14" font-weight="bold">How to Build Great Software</text>
+  <text x="95" y="220" fill="#888" font-family="Arial" font-size="12">A comprehensive guide to modern development...</text>
+  
+  <!-- Reactions -->
+  <rect x="75" y="245" width="50" height="24" rx="12" fill="#2f3136" stroke="#40444b" stroke-width="1"/>
+  <text x="100" y="262" fill="#dcddde" font-family="Arial" font-size="12" text-anchor="middle">👍 5</text>
+  <rect x="130" y="245" width="50" height="24" rx="12" fill="#2f3136" stroke="#40444b" stroke-width="1"/>
+  <text x="155" y="262" fill="#dcddde" font-family="Arial" font-size="12" text-anchor="middle">🎉 2</text>
+  
+  <!-- Message 2 - Reply -->
+  <rect x="25" y="290" width="750" height="70" fill="#32353b"/>
+  <text x="75" y="308" fill="#888" font-family="Arial" font-size="11">↩️ Replying to Alice</text>
+  <circle cx="45" cy="340" r="20" fill="#57F287"/>
+  <text x="38" y="346" fill="white" font-family="Arial" font-size="14" font-weight="bold">B</text>
+  <text x="75" y="330" fill="#fff" font-family="Arial" font-size="14" font-weight="bold">Bob</text>
+  <text x="110" y="330" fill="#888" font-family="Arial" font-size="11">Today at 3:46 PM</text>
+  <text x="75" y="352" fill="#dcddde" font-family="Arial" font-size="14">Thanks for sharing! This is exactly what I was looking for 🙌</text>
+  
+  <!-- Message 3 with attachment -->
+  <circle cx="45" cy="410" r="20" fill="#FEE75C"/>
+  <text x="38" y="416" fill="#333" font-family="Arial" font-size="14" font-weight="bold">C</text>
+  <text x="75" y="395" fill="#fff" font-family="Arial" font-size="14" font-weight="bold">Charlie</text>
+  <text x="135" y="395" fill="#888" font-family="Arial" font-size="11">Today at 3:48 PM</text>
+  <text x="75" y="415" fill="#dcddde" font-family="Arial" font-size="14">Here's the screenshot I mentioned:</text>
+  
+  <!-- Image attachment placeholder -->
+  <rect x="75" y="425" width="250" height="50" rx="4" fill="#2f3136"/>
+  <text x="200" y="455" fill="#888" font-family="Arial" font-size="12" text-anchor="middle">📷 screenshot.png (245 KB)</text>
+  
+  <!-- Footer -->
+  <text x="400" y="490" fill="#444" font-family="Arial" font-size="11" text-anchor="middle" font-style="italic">Message Viewer - Screenshot Placeholder</text>
+</svg>

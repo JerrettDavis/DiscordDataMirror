@@ -1,0 +1,57 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dotnet/docfx/main/schemas/docfx.schema.json",
+  "metadata": [
+    {
+      "src": [
+        {
+          "files": ["src/**/*.csproj"],
+          "src": ".."
+        }
+      ],
+      "dest": "api",
+      "properties": {
+        "TargetFramework": "net10.0"
+      }
+    }
+  ],
+  "build": {
+    "content": [
+      {
+        "files": ["api/**.yml", "api/index.md"]
+      },
+      {
+        "files": [
+          "*.md",
+          "guides/*.md",
+          "toc.yml"
+        ]
+      }
+    ],
+    "resource": [
+      {
+        "files": ["images/**"]
+      }
+    ],
+    "output": "_site",
+    "template": ["default", "modern"],
+    "globalMetadata": {
+      "_appTitle": "DiscordDataMirror",
+      "_appName": "DiscordDataMirror",
+      "_appLogoPath": "images/logo.svg",
+      "_appFaviconPath": "images/favicon.ico",
+      "_enableSearch": true,
+      "_enableNewTab": true,
+      "_disableContribution": false,
+      "_gitContribute": {
+        "repo": "https://github.com/JerrettDavis/DiscordDataMirror",
+        "branch": "main"
+      }
+    },
+    "sitemap": {
+      "baseUrl": "https://jerrettdavis.github.io/DiscordDataMirror"
+    },
+    "xref": [
+      "https://learn.microsoft.com/en-us/dotnet/.xrefmap.json"
+    ]
+  }
+}

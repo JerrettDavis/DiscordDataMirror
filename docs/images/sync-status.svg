@@ -1,0 +1,52 @@
+<svg width="800" height="500" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="500" fill="#1a1a2e"/>
+  
+  <!-- Header -->
+  <rect x="0" y="0" width="800" height="50" fill="#0f0f1a"/>
+  <text x="30" y="32" fill="white" font-family="Arial" font-size="18" font-weight="bold">🔄 Sync Status</text>
+  
+  <!-- Overall status card -->
+  <rect x="30" y="70" width="740" height="80" rx="8" fill="#2d2d44"/>
+  <circle cx="70" cy="110" r="20" fill="#57F287"/>
+  <text x="62" y="117" fill="white" font-family="Arial" font-size="18">✓</text>
+  <text x="110" y="100" fill="white" font-family="Arial" font-size="18" font-weight="bold">All Systems Operational</text>
+  <text x="110" y="125" fill="#888" font-family="Arial" font-size="13">Last sync completed 2 minutes ago • Next sync in 58 minutes</text>
+  
+  <!-- Server sync status -->
+  <text x="30" y="185" fill="#888" font-family="Arial" font-size="12" font-weight="bold">SERVER SYNC STATUS</text>
+  
+  <!-- Server 1 -->
+  <rect x="30" y="200" width="740" height="70" rx="8" fill="#2d2d44"/>
+  <circle cx="60" cy="235" r="12" fill="#57F287"/>
+  <text x="85" y="225" fill="white" font-family="Arial" font-size="16" font-weight="bold">My Discord Server</text>
+  <text x="85" y="248" fill="#888" font-family="Arial" font-size="12">24 channels • 5,234 messages • Last sync: 2 min ago</text>
+  <text x="700" y="235" fill="#57F287" font-family="Arial" font-size="13" text-anchor="end">Synced</text>
+  
+  <!-- Server 2 -->
+  <rect x="30" y="280" width="740" height="70" rx="8" fill="#2d2d44"/>
+  <circle cx="60" cy="315" r="12" fill="#57F287"/>
+  <text x="85" y="305" fill="white" font-family="Arial" font-size="16" font-weight="bold">Gaming Hub</text>
+  <text x="85" y="328" fill="#888" font-family="Arial" font-size="12">15 channels • 4,891 messages • Last sync: 2 min ago</text>
+  <text x="700" y="315" fill="#57F287" font-family="Arial" font-size="13" text-anchor="end">Synced</text>
+  
+  <!-- Server 3 - In Progress -->
+  <rect x="30" y="360" width="740" height="90" rx="8" fill="#2d2d44"/>
+  <circle cx="60" cy="395" r="12" fill="#FEE75C"/>
+  <text x="85" y="385" fill="white" font-family="Arial" font-size="16" font-weight="bold">Work Team</text>
+  <text x="85" y="408" fill="#888" font-family="Arial" font-size="12">8 channels • Syncing historical messages...</text>
+  <text x="700" y="395" fill="#FEE75C" font-family="Arial" font-size="13" text-anchor="end">Syncing...</text>
+  
+  <!-- Progress bar -->
+  <rect x="85" y="420" width="500" height="12" rx="6" fill="#1a1a2e"/>
+  <rect x="85" y="420" width="325" height="12" rx="6" fill="#5865F2"/>
+  <text x="600" y="432" fill="#888" font-family="Arial" font-size="11">65% - 1,523 / 2,341 messages</text>
+  
+  <!-- Quick actions -->
+  <text x="30" y="480" fill="#888" font-family="Arial" font-size="12" font-weight="bold">QUICK ACTIONS</text>
+  <rect x="160" y="465" width="100" height="28" rx="4" fill="#5865F2"/>
+  <text x="210" y="484" fill="white" font-family="Arial" font-size="12" text-anchor="middle">Sync All</text>
+  <rect x="270" y="465" width="120" height="28" rx="4" fill="#2d2d44"/>
+  <text x="330" y="484" fill="#ccc" font-family="Arial" font-size="12" text-anchor="middle">View Logs</text>
+  
+  <text x="400" y="495" fill="#444" font-family="Arial" font-size="11" text-anchor="middle" font-style="italic">Sync Status - Screenshot Placeholder</text>
+</svg>

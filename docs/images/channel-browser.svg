@@ -1,0 +1,72 @@
+<svg width="800" height="500" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="500" fill="#1a1a2e"/>
+  
+  <!-- Header -->
+  <rect x="0" y="0" width="800" height="50" fill="#0f0f1a"/>
+  <text x="30" y="32" fill="white" font-family="Arial" font-size="18" font-weight="bold">📁 Channel Browser</text>
+  <text x="250" y="32" fill="#888" font-family="Arial" font-size="14">My Discord Server</text>
+  
+  <!-- Channel tree sidebar -->
+  <rect x="0" y="50" width="280" height="450" fill="#16213e"/>
+  
+  <text x="20" y="80" fill="#888" font-family="Arial" font-size="11" font-weight="bold">TEXT CHANNELS</text>
+  
+  <!-- Channels -->
+  <rect x="10" y="95" width="260" height="32" rx="4" fill="#5865F2"/>
+  <text x="25" y="116" fill="white" font-family="Arial" font-size="14"># general</text>
+  <text x="220" y="116" fill="rgba(255,255,255,0.6)" font-family="Arial" font-size="11">1,234</text>
+  
+  <rect x="10" y="135" width="260" height="32" rx="4" fill="transparent"/>
+  <text x="25" y="156" fill="#ccc" font-family="Arial" font-size="14"># announcements</text>
+  <text x="220" y="156" fill="#666" font-family="Arial" font-size="11">89</text>
+  
+  <rect x="10" y="175" width="260" height="32" rx="4" fill="transparent"/>
+  <text x="25" y="196" fill="#ccc" font-family="Arial" font-size="14"># introductions</text>
+  <text x="220" y="196" fill="#666" font-family="Arial" font-size="11">456</text>
+  
+  <rect x="10" y="215" width="260" height="32" rx="4" fill="transparent"/>
+  <text x="25" y="236" fill="#ccc" font-family="Arial" font-size="14"># off-topic</text>
+  <text x="220" y="236" fill="#666" font-family="Arial" font-size="11">2,341</text>
+  
+  <text x="20" y="280" fill="#888" font-family="Arial" font-size="11" font-weight="bold">VOICE CHANNELS</text>
+  
+  <text x="25" y="305" fill="#888" font-family="Arial" font-size="14">🔊 General Voice</text>
+  <text x="25" y="335" fill="#888" font-family="Arial" font-size="14">🔊 Gaming</text>
+  
+  <text x="20" y="380" fill="#888" font-family="Arial" font-size="11" font-weight="bold">THREADS (12)</text>
+  <text x="25" y="405" fill="#888" font-family="Arial" font-size="13">📄 Project Discussion</text>
+  <text x="25" y="430" fill="#888" font-family="Arial" font-size="13">📄 Event Planning</text>
+  
+  <!-- Channel info panel -->
+  <rect x="300" y="70" width="480" height="120" rx="8" fill="#2d2d44"/>
+  <text x="320" y="100" fill="white" font-family="Arial" font-size="20" font-weight="bold"># general</text>
+  <text x="320" y="125" fill="#888" font-family="Arial" font-size="13">The main chat channel for general discussion</text>
+  
+  <text x="320" y="160" fill="#888" font-family="Arial" font-size="12">📝 1,234 messages  •  👥 89 participants  •  📅 Created Jan 15, 2024</text>
+  
+  <!-- Message preview -->
+  <rect x="300" y="210" width="480" height="270" rx="8" fill="#2d2d44"/>
+  <text x="320" y="240" fill="white" font-family="Arial" font-size="14" font-weight="bold">Recent Messages</text>
+  
+  <!-- Message 1 -->
+  <circle cx="335" cy="280" r="18" fill="#5865F2"/>
+  <text x="365" y="275" fill="white" font-family="Arial" font-size="14" font-weight="bold">Alice</text>
+  <text x="415" y="275" fill="#666" font-family="Arial" font-size="11">Today at 3:45 PM</text>
+  <text x="365" y="295" fill="#ddd" font-family="Arial" font-size="13">Hey everyone! Welcome to the server 👋</text>
+  
+  <!-- Message 2 -->
+  <circle cx="335" cy="345" r="18" fill="#57F287"/>
+  <text x="365" y="340" fill="white" font-family="Arial" font-size="14" font-weight="bold">Bob</text>
+  <text x="400" y="340" fill="#666" font-family="Arial" font-size="11">Today at 3:46 PM</text>
+  <text x="365" y="360" fill="#ddd" font-family="Arial" font-size="13">Thanks Alice! Excited to be here</text>
+  
+  <!-- Message 3 -->
+  <circle cx="335" cy="410" r="18" fill="#FEE75C"/>
+  <text x="365" y="405" fill="white" font-family="Arial" font-size="14" font-weight="bold">Charlie</text>
+  <text x="430" y="405" fill="#666" font-family="Arial" font-size="11">Today at 3:47 PM</text>
+  <text x="365" y="425" fill="#ddd" font-family="Arial" font-size="13">What's everyone working on today?</text>
+  
+  <text x="540" y="460" fill="#5865F2" font-family="Arial" font-size="12" text-anchor="middle">View all messages →</text>
+  
+  <text x="400" y="490" fill="#444" font-family="Arial" font-size="11" text-anchor="middle" font-style="italic">Channel Browser - Screenshot Placeholder</text>
+</svg>

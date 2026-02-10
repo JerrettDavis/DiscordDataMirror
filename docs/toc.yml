@@ -1,0 +1,30 @@
+- name: Home
+  href: index.md
+- name: Getting Started
+  href: guides/getting-started.md
+- name: User Guide
+  items:
+    - name: Features
+      href: guides/features.md
+    - name: Configuration
+      href: guides/configuration.md
+    - name: Bot Setup
+      href: BOT_SETUP.md
+    - name: Deployment
+      href: DEPLOYMENT.md
+- name: Development
+  items:
+    - name: Development Guide
+      href: DEVELOPMENT.md
+    - name: Architecture
+      href: ../ARCHITECTURE.md
+    - name: Contributing
+      href: guides/contributing.md
+- name: Support
+  items:
+    - name: FAQ
+      href: guides/faq.md
+    - name: Troubleshooting
+      href: guides/troubleshooting.md
+- name: API Reference
+  href: api/

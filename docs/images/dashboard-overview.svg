@@ -1,0 +1,75 @@
+<svg width="800" height="500" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
+    </linearGradient>
+  </defs>
+  
+  <rect width="800" height="500" fill="url(#bg1)"/>
+  
+  <!-- Header -->
+  <rect x="0" y="0" width="800" height="60" fill="#0f0f1a"/>
+  <text x="30" y="38" fill="white" font-family="Arial" font-size="20" font-weight="bold">🔮 DiscordDataMirror</text>
+  <rect x="600" y="15" width="180" height="30" rx="15" fill="#2d2d44"/>
+  <text x="690" y="36" fill="#888" font-family="Arial" font-size="13" text-anchor="middle">🔍 Search messages...</text>
+  
+  <!-- Sidebar -->
+  <rect x="0" y="60" width="220" height="440" fill="#0f0f1a"/>
+  
+  <!-- Server list -->
+  <text x="20" y="95" fill="#888" font-family="Arial" font-size="12" font-weight="bold">SERVERS (3)</text>
+  
+  <rect x="15" y="110" width="190" height="45" rx="6" fill="#5865F2"/>
+  <text x="25" y="138" fill="white" font-family="Arial" font-size="14">🏠 My Discord Server</text>
+  
+  <rect x="15" y="165" width="190" height="45" rx="6" fill="#2d2d44"/>
+  <text x="25" y="193" fill="#ccc" font-family="Arial" font-size="14">🎮 Gaming Hub</text>
+  
+  <rect x="15" y="220" width="190" height="45" rx="6" fill="#2d2d44"/>
+  <text x="25" y="248" fill="#ccc" font-family="Arial" font-size="14">💼 Work Team</text>
+  
+  <!-- Sync status -->
+  <text x="20" y="300" fill="#888" font-family="Arial" font-size="12" font-weight="bold">SYNC STATUS</text>
+  <circle cx="30" cy="325" r="6" fill="#57F287"/>
+  <text x="45" y="330" fill="#ccc" font-family="Arial" font-size="13">All servers synced</text>
+  <text x="45" y="350" fill="#666" font-family="Arial" font-size="11">Last: 2 minutes ago</text>
+  
+  <!-- Main content -->
+  <text x="250" y="100" fill="white" font-family="Arial" font-size="22" font-weight="bold">Dashboard Overview</text>
+  
+  <!-- Stats row -->
+  <rect x="240" y="120" width="130" height="90" rx="8" fill="#2d2d44"/>
+  <text x="305" y="155" fill="#5865F2" font-family="Arial" font-size="32" text-anchor="middle" font-weight="bold">3</text>
+  <text x="305" y="185" fill="#888" font-family="Arial" font-size="12" text-anchor="middle">Servers</text>
+  
+  <rect x="385" y="120" width="130" height="90" rx="8" fill="#2d2d44"/>
+  <text x="450" y="155" fill="#57F287" font-family="Arial" font-size="32" text-anchor="middle" font-weight="bold">47</text>
+  <text x="450" y="185" fill="#888" font-family="Arial" font-size="12" text-anchor="middle">Channels</text>
+  
+  <rect x="530" y="120" width="130" height="90" rx="8" fill="#2d2d44"/>
+  <text x="595" y="155" fill="#FEE75C" font-family="Arial" font-size="32" text-anchor="middle" font-weight="bold">892</text>
+  <text x="595" y="185" fill="#888" font-family="Arial" font-size="12" text-anchor="middle">Members</text>
+  
+  <rect x="675" y="120" width="105" height="90" rx="8" fill="#2d2d44"/>
+  <text x="727" y="155" fill="#EB459E" font-family="Arial" font-size="28" text-anchor="middle" font-weight="bold">12.4K</text>
+  <text x="727" y="185" fill="#888" font-family="Arial" font-size="12" text-anchor="middle">Messages</text>
+  
+  <!-- Server cards -->
+  <text x="250" y="250" fill="white" font-family="Arial" font-size="16" font-weight="bold">Your Servers</text>
+  
+  <rect x="240" y="265" width="250" height="120" rx="8" fill="#2d2d44"/>
+  <text x="260" y="295" fill="white" font-family="Arial" font-size="16">🏠 My Discord Server</text>
+  <text x="260" y="320" fill="#888" font-family="Arial" font-size="12">24 channels • 156 members</text>
+  <text x="260" y="345" fill="#888" font-family="Arial" font-size="12">5,234 messages archived</text>
+  <circle cx="460" cy="320" r="8" fill="#57F287"/>
+  
+  <rect x="510" y="265" width="250" height="120" rx="8" fill="#2d2d44"/>
+  <text x="530" y="295" fill="white" font-family="Arial" font-size="16">🎮 Gaming Hub</text>
+  <text x="530" y="320" fill="#888" font-family="Arial" font-size="12">15 channels • 523 members</text>
+  <text x="530" y="345" fill="#888" font-family="Arial" font-size="12">4,891 messages archived</text>
+  <circle cx="730" cy="320" r="8" fill="#57F287"/>
+  
+  <!-- Footer note -->
+  <text x="400" y="480" fill="#444" font-family="Arial" font-size="11" text-anchor="middle" font-style="italic">Dashboard Overview - Screenshot Placeholder</text>
+</svg>
