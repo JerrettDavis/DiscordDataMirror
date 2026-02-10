@@ -17,22 +17,22 @@ namespace DiscordDataMirror.E2E.Tests.Features
     
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Reqnroll", "3.0.0.0")]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    public partial class DashboardFeature : object, global::Xunit.IClassFixture<DashboardFeature.FixtureData>, global::Xunit.IAsyncLifetime
+    public partial class DashboardHomePageFeature : object, global::Xunit.IClassFixture<DashboardHomePageFeature.FixtureData>, global::Xunit.IAsyncLifetime
     {
         
         private global::Reqnroll.ITestRunner testRunner;
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("en-US"), "Features", "Dashboard", "    As a user\r\n    I want to access the Discord Data Mirror dashboard\r\n    So tha" +
-                "t I can view synced Discord data", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("en-US"), "Features", "Dashboard Home Page", "    As a user\r\n    I want to access the Discord Data Mirror dashboard\r\n    So tha" +
+                "t I can view an overview of synced Discord data", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
         
         private global::Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
         
 #line 1 "Dashboard.feature"
 #line hidden
         
-        public DashboardFeature(DashboardFeature.FixtureData fixtureData, global::Xunit.Abstractions.ITestOutputHelper testOutputHelper)
+        public DashboardHomePageFeature(DashboardHomePageFeature.FixtureData fixtureData, global::Xunit.Abstractions.ITestOutputHelper testOutputHelper)
         {
             this._testOutputHelper = testOutputHelper;
         }
@@ -104,9 +104,18 @@ namespace DiscordDataMirror.E2E.Tests.Features
             await testRunner.CollectScenarioErrorsAsync();
         }
         
+        public virtual async global::System.Threading.Tasks.Task FeatureBackgroundAsync()
+        {
+#line 6
+    #line hidden
+#line 7
+        await testRunner.GivenAsync("the application is running with test data", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
+#line hidden
+        }
+        
         private static global::Reqnroll.Formatters.RuntimeSupport.FeatureLevelCucumberMessages InitializeCucumberMessages()
         {
-            return new global::Reqnroll.Formatters.RuntimeSupport.FeatureLevelCucumberMessages("Features/Dashboard.feature.ndjson", 6);
+            return new global::Reqnroll.Formatters.RuntimeSupport.FeatureLevelCucumberMessages("Features/Dashboard.feature.ndjson", 7);
         }
         
         async global::System.Threading.Tasks.Task global::Xunit.IAsyncLifetime.InitializeAsync()
@@ -135,7 +144,7 @@ namespace DiscordDataMirror.E2E.Tests.Features
         }
         
         [global::Xunit.SkippableFactAttribute(DisplayName="Dashboard home page loads successfully")]
-        [global::Xunit.TraitAttribute("FeatureTitle", "Dashboard")]
+        [global::Xunit.TraitAttribute("FeatureTitle", "Dashboard Home Page")]
         [global::Xunit.TraitAttribute("Description", "Dashboard home page loads successfully")]
         public async global::System.Threading.Tasks.Task DashboardHomePageLoadsSuccessfully()
         {
@@ -145,7 +154,7 @@ namespace DiscordDataMirror.E2E.Tests.Features
             global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Dashboard home page loads successfully", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 6
+#line 9
     this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -155,31 +164,37 @@ namespace DiscordDataMirror.E2E.Tests.Features
             else
             {
                 await this.ScenarioStartAsync();
-#line 7
+#line 6
+    await this.FeatureBackgroundAsync();
+#line hidden
+#line 10
         await testRunner.WhenAsync("I navigate to the dashboard", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 8
+#line 11
         await testRunner.ThenAsync("the page title should contain \"Discord Data Mirror\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
-#line 9
-        await testRunner.AndAsync("the page should display the home content", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line 12
+        await testRunner.AndAsync("I should see the page header \"Discord Data Mirror\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 13
+        await testRunner.AndAsync("I should see the subtitle \"Your Discord server archive and analytics dashboard\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
         }
         
-        [global::Xunit.SkippableFactAttribute(DisplayName="Navigate to guild overview")]
-        [global::Xunit.TraitAttribute("FeatureTitle", "Dashboard")]
-        [global::Xunit.TraitAttribute("Description", "Navigate to guild overview")]
-        public async global::System.Threading.Tasks.Task NavigateToGuildOverview()
+        [global::Xunit.SkippableFactAttribute(DisplayName="Dashboard displays statistics cards")]
+        [global::Xunit.TraitAttribute("FeatureTitle", "Dashboard Home Page")]
+        [global::Xunit.TraitAttribute("Description", "Dashboard displays statistics cards")]
+        public async global::System.Threading.Tasks.Task DashboardDisplaysStatisticsCards()
         {
             string[] tagsOfScenario = ((string[])(null));
             global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
             string pickleIndex = "1";
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Navigate to guild overview", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Dashboard displays statistics cards", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 11
+#line 15
     this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -189,31 +204,40 @@ namespace DiscordDataMirror.E2E.Tests.Features
             else
             {
                 await this.ScenarioStartAsync();
-#line 12
-        await testRunner.GivenAsync("I am on the dashboard home page", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
+#line 6
+    await this.FeatureBackgroundAsync();
 #line hidden
-#line 13
-        await testRunner.WhenAsync("I click on a guild in the sidebar", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line 16
+        await testRunner.WhenAsync("I navigate to the dashboard", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 14
-        await testRunner.ThenAsync("I should see the guild overview page", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line 17
+        await testRunner.ThenAsync("I should see a stats card showing \"Servers\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 18
+        await testRunner.AndAsync("I should see a stats card showing \"Channels\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 19
+        await testRunner.AndAsync("I should see a stats card showing \"Messages\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 20
+        await testRunner.AndAsync("I should see a stats card showing \"Users\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
         }
         
-        [global::Xunit.SkippableFactAttribute(DisplayName="View sync status")]
-        [global::Xunit.TraitAttribute("FeatureTitle", "Dashboard")]
-        [global::Xunit.TraitAttribute("Description", "View sync status")]
-        public async global::System.Threading.Tasks.Task ViewSyncStatus()
+        [global::Xunit.SkippableFactAttribute(DisplayName="Dashboard displays synced servers")]
+        [global::Xunit.TraitAttribute("FeatureTitle", "Dashboard Home Page")]
+        [global::Xunit.TraitAttribute("Description", "Dashboard displays synced servers")]
+        public async global::System.Threading.Tasks.Task DashboardDisplaysSyncedServers()
         {
             string[] tagsOfScenario = ((string[])(null));
             global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
             string pickleIndex = "2";
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("View sync status", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Dashboard displays synced servers", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 16
+#line 22
     this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -223,31 +247,37 @@ namespace DiscordDataMirror.E2E.Tests.Features
             else
             {
                 await this.ScenarioStartAsync();
-#line 17
-        await testRunner.GivenAsync("I am on the dashboard home page", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
+#line 6
+    await this.FeatureBackgroundAsync();
 #line hidden
-#line 18
-        await testRunner.WhenAsync("I navigate to the sync status page", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line 23
+        await testRunner.WhenAsync("I navigate to the dashboard", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 19
-        await testRunner.ThenAsync("I should see the sync status information", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line 24
+        await testRunner.ThenAsync("I should see the heading \"Synced Servers\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 25
+        await testRunner.AndAsync("I should see a server card for \"Test Server Alpha\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+#line hidden
+#line 26
+        await testRunner.AndAsync("I should see a server card for \"Test Server Beta\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
         }
         
-        [global::Xunit.SkippableFactAttribute(DisplayName="Dashboard shows connection status")]
-        [global::Xunit.TraitAttribute("FeatureTitle", "Dashboard")]
-        [global::Xunit.TraitAttribute("Description", "Dashboard shows connection status")]
-        public async global::System.Threading.Tasks.Task DashboardShowsConnectionStatus()
+        [global::Xunit.SkippableFactAttribute(DisplayName="Server card displays sync status")]
+        [global::Xunit.TraitAttribute("FeatureTitle", "Dashboard Home Page")]
+        [global::Xunit.TraitAttribute("Description", "Server card displays sync status")]
+        public async global::System.Threading.Tasks.Task ServerCardDisplaysSyncStatus()
         {
             string[] tagsOfScenario = ((string[])(null));
             global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
             string pickleIndex = "3";
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Dashboard shows connection status", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Server card displays sync status", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
-#line 21
+#line 28
     this.ScenarioInitialize(scenarioInfo, ruleInfo);
 #line hidden
             if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
@@ -257,11 +287,54 @@ namespace DiscordDataMirror.E2E.Tests.Features
             else
             {
                 await this.ScenarioStartAsync();
-#line 22
+#line 6
+    await this.FeatureBackgroundAsync();
+#line hidden
+#line 29
         await testRunner.WhenAsync("I navigate to the dashboard", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
-#line 23
-        await testRunner.ThenAsync("I should see the connection status indicator", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line 30
+        await testRunner.ThenAsync("the server card \"Test Server Alpha\" should show sync status", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+            }
+            await this.ScenarioCleanupAsync();
+        }
+        
+        [global::Xunit.SkippableFactAttribute(DisplayName="Navigate to guild from server card")]
+        [global::Xunit.TraitAttribute("FeatureTitle", "Dashboard Home Page")]
+        [global::Xunit.TraitAttribute("Description", "Navigate to guild from server card")]
+        public async global::System.Threading.Tasks.Task NavigateToGuildFromServerCard()
+        {
+            string[] tagsOfScenario = ((string[])(null));
+            global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
+            string pickleIndex = "4";
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Navigate to guild from server card", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
+            string[] tagsOfRule = ((string[])(null));
+            global::Reqnroll.RuleInfo ruleInfo = null;
+#line 32
+    this.ScenarioInitialize(scenarioInfo, ruleInfo);
+#line hidden
+            if ((global::Reqnroll.TagHelper.ContainsIgnoreTag(scenarioInfo.CombinedTags) || global::Reqnroll.TagHelper.ContainsIgnoreTag(featureTags)))
+            {
+                await testRunner.SkipScenarioAsync();
+            }
+            else
+            {
+                await this.ScenarioStartAsync();
+#line 6
+    await this.FeatureBackgroundAsync();
+#line hidden
+#line 33
+        await testRunner.GivenAsync("I am on the dashboard home page", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
+#line hidden
+#line 34
+        await testRunner.WhenAsync("I click on the server card \"Test Server Alpha\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+#line hidden
+#line 35
+        await testRunner.ThenAsync("I should be on the guild overview page for \"Test Server Alpha\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+#line hidden
+#line 36
+        await testRunner.AndAsync("the URL should contain \"/guild/\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
@@ -274,12 +347,12 @@ namespace DiscordDataMirror.E2E.Tests.Features
             
             async global::System.Threading.Tasks.Task global::Xunit.IAsyncLifetime.InitializeAsync()
             {
-                await DashboardFeature.FeatureSetupAsync();
+                await DashboardHomePageFeature.FeatureSetupAsync();
             }
             
             async global::System.Threading.Tasks.Task global::Xunit.IAsyncLifetime.DisposeAsync()
             {
-                await DashboardFeature.FeatureTearDownAsync();
+                await DashboardHomePageFeature.FeatureTearDownAsync();
             }
         }
     }

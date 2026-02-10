@@ -11,94 +11,67 @@ public class DashboardSteps(ScenarioContext scenarioContext)
     private IPage Page => scenarioContext.GetPage();
     private string DashboardUrl => scenarioContext.GetDashboardUrl();
 
-    [When(@"I navigate to the dashboard")]
-    public async Task WhenINavigateToTheDashboard()
+    [Then(@"I should see a server card for ""(.*)""")]
+    public async Task ThenIShouldSeeAServerCardFor(string serverName)
     {
-        await Page.GotoAsync(DashboardUrl);
-        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-    }
-
-    [Given(@"I am on the dashboard home page")]
-    public async Task GivenIAmOnTheDashboardHomePage()
-    {
-        await Page.GotoAsync(DashboardUrl);
-        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-    }
-
-    [Then(@"the page title should contain ""(.*)""")]
-    public async Task ThenThePageTitleShouldContain(string expectedTitle)
-    {
-        var title = await Page.TitleAsync();
-        Assert.Contains(expectedTitle, title, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Then(@"the page should display the home content")]
-    public async Task ThenThePageShouldDisplayTheHomeContent()
-    {
-        // Wait for Blazor to render
-        await Page.WaitForSelectorAsync("body", new PageWaitForSelectorOptions
+        // Wait for server cards to load
+        await Page.WaitForSelectorAsync(".mud-card", new() { Timeout = 10000 });
+        
+        var cards = await Page.Locator(".mud-card").AllAsync();
+        var cardTexts = new List<string>();
+        foreach (var card in cards)
         {
-            State = WaitForSelectorState.Visible,
-            Timeout = 10000
-        });
-
-        var content = await Page.ContentAsync();
-        Assert.False(string.IsNullOrWhiteSpace(content), "Page content should not be empty");
-    }
-
-    [When(@"I click on a guild in the sidebar")]
-    public async Task WhenIClickOnAGuildInTheSidebar()
-    {
-        // Wait for guild list to load
-        var guildLink = await Page.WaitForSelectorAsync("[data-testid='guild-link'], .guild-item, .mud-nav-link",
-            new PageWaitForSelectorOptions { Timeout = 10000 });
-
-        if (guildLink is not null)
-        {
-            await guildLink.ClickAsync();
-            await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+            var text = await card.TextContentAsync();
+            cardTexts.Add(text ?? "");
         }
+        
+        Assert.Contains(cardTexts, t => t.Contains(serverName, StringComparison.OrdinalIgnoreCase));
     }
 
-    [Then(@"I should see the guild overview page")]
-    public async Task ThenIShouldSeeTheGuildOverviewPage()
+    [Then(@"the server card ""(.*)"" should show sync status")]
+    public async Task ThenTheServerCardShouldShowSyncStatus(string serverName)
     {
-        // Check URL contains guild or the page has guild content
-        var url = Page.Url;
-        var content = await Page.ContentAsync();
-
-        Assert.True(url.Contains("guild", StringComparison.OrdinalIgnoreCase)
-            || content.Contains("guild", StringComparison.OrdinalIgnoreCase),
-            "Should be on a guild page");
+        var card = Page.Locator(".mud-card").Filter(new() { HasText = serverName });
+        var cardContent = await card.TextContentAsync();
+        
+        // Check for sync-related content (Synced, Never synced, etc.)
+        var hasSyncStatus = cardContent?.Contains("Synced", StringComparison.OrdinalIgnoreCase) == true ||
+                           cardContent?.Contains("Never", StringComparison.OrdinalIgnoreCase) == true;
+        
+        Assert.True(hasSyncStatus, $"Server card '{serverName}' should display sync status");
     }
 
-    [When(@"I navigate to the sync status page")]
-    public async Task WhenINavigateToTheSyncStatusPage()
+    [When(@"I click on the server card ""(.*)""")]
+    public async Task WhenIClickOnTheServerCard(string serverName)
     {
-        await Page.GotoAsync($"{DashboardUrl}/sync-status");
+        var card = Page.Locator(".mud-card").Filter(new() { HasText = serverName });
+        await card.First.ClickAsync();
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await Task.Delay(500); // Wait for Blazor navigation
     }
 
-    [Then(@"I should see the sync status information")]
-    public async Task ThenIShouldSeeTheSyncStatusInformation()
+    [Then(@"I should be on the guild overview page for ""(.*)""")]
+    public async Task ThenIShouldBeOnTheGuildOverviewPageFor(string serverName)
     {
-        var content = await Page.ContentAsync();
-        Assert.True(content.Contains("sync", StringComparison.OrdinalIgnoreCase)
-            || content.Contains("status", StringComparison.OrdinalIgnoreCase),
-            "Page should contain sync status information");
+        Assert.Contains("/guild/", Page.Url, StringComparison.OrdinalIgnoreCase);
+        
+        var pageContent = await Page.ContentAsync();
+        Assert.Contains(serverName, pageContent, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Then(@"I should see the connection status indicator")]
-    public async Task ThenIShouldSeeTheConnectionStatusIndicator()
+    [Then(@"I should be on the guild overview page")]
+    public void ThenIShouldBeOnTheGuildOverviewPage()
     {
-        // Look for connection status component
-        var statusIndicator = await Page.QuerySelectorAsync("[data-testid='connection-status'], .connection-status, .status-indicator");
+        Assert.Contains("/guild/", Page.Url, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("/channels", Page.Url, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("/members", Page.Url, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("/channel/", Page.Url, StringComparison.OrdinalIgnoreCase);
+    }
 
-        // If no specific indicator, at least verify the page loaded
-        if (statusIndicator is null)
-        {
-            var content = await Page.ContentAsync();
-            Assert.False(string.IsNullOrWhiteSpace(content), "Page should have content");
-        }
+    [Then(@"I should be on the dashboard home page")]
+    public void ThenIShouldBeOnTheDashboardHomePage()
+    {
+        var path = new Uri(Page.Url).AbsolutePath;
+        Assert.True(path == "/" || path == "", "Should be on the home page");
     }
 }

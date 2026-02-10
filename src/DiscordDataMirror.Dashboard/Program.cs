@@ -78,3 +78,11 @@ app.MapHub<SyncHub>("/hubs/sync");
 app.MapDefaultEndpoints();
 
 app.Run();
+
+namespace DiscordDataMirror.Dashboard
+{
+    /// <summary>
+    /// Marker class for WebApplicationFactory to identify the entry point assembly.
+    /// </summary>
+    public partial class Program { }
+}

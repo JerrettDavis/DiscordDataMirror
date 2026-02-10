@@ -24,4 +24,9 @@
     <ContainerBaseImage>mcr.microsoft.com/dotnet/aspnet:10.0</ContainerBaseImage>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="DiscordDataMirror.E2E.Tests" />
+    <InternalsVisibleTo Include="DiscordDataMirror.Dashboard.Tests" />
+  </ItemGroup>
+
 </Project>
