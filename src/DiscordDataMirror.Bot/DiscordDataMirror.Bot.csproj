@@ -5,6 +5,11 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dotnet-DiscordDataMirror.Bot-4c526a9f-3f75-4154-9a04-aef58989187c</UserSecretsId>
+    
+    <!-- Container publishing settings -->
+    <ContainerRepository>discorddatamirror-bot</ContainerRepository>
+    <ContainerImageTag>latest</ContainerImageTag>
+    <ContainerBaseImage>mcr.microsoft.com/dotnet/aspnet:10.0</ContainerBaseImage>
   </PropertyGroup>
 
   <ItemGroup>

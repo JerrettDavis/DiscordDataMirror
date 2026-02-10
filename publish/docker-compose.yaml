@@ -1,0 +1,87 @@
+services:
+  docker-compose-dashboard:
+    image: "mcr.microsoft.com/dotnet/nightly/aspire-dashboard:latest"
+    ports:
+      - "18888"
+    expose:
+      - "18889"
+      - "18890"
+    networks:
+      - "aspire"
+    restart: "always"
+  postgres:
+    image: "docker.io/library/postgres:17.6"
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: "scram-sha-256"
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+    expose:
+      - "5432"
+    volumes:
+      - type: "volume"
+        target: "/var/lib/postgresql/data"
+        source: "discorddatamirror-postgres-data"
+        read_only: false
+    networks:
+      - "aspire"
+  dashboard:
+    image: "${DASHBOARD_IMAGE}"
+    environment:
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EXCEPTION_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      HTTP_PORTS: "${DASHBOARD_PORT}"
+      ConnectionStrings__discorddatamirror: "Host=postgres;Port=5432;Username=postgres;Password=${POSTGRES_PASSWORD};Database=discorddatamirror"
+      DISCORDDATAMIRROR_HOST: "postgres"
+      DISCORDDATAMIRROR_PORT: "5432"
+      DISCORDDATAMIRROR_USERNAME: "postgres"
+      DISCORDDATAMIRROR_PASSWORD: "${POSTGRES_PASSWORD}"
+      DISCORDDATAMIRROR_URI: "postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/discorddatamirror"
+      DISCORDDATAMIRROR_JDBCCONNECTIONSTRING: "jdbc:postgresql://postgres:5432/discorddatamirror"
+      DISCORDDATAMIRROR_DATABASENAME: "discorddatamirror"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://docker-compose-dashboard:18889"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "dashboard"
+    ports:
+      - "${DASHBOARD_PORT}"
+    depends_on:
+      postgres:
+        condition: "service_started"
+    networks:
+      - "aspire"
+  bot:
+    image: "${BOT_IMAGE}"
+    environment:
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EXCEPTION_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
+      ConnectionStrings__discorddatamirror: "Host=postgres;Port=5432;Username=postgres;Password=${POSTGRES_PASSWORD};Database=discorddatamirror"
+      DISCORDDATAMIRROR_HOST: "postgres"
+      DISCORDDATAMIRROR_PORT: "5432"
+      DISCORDDATAMIRROR_USERNAME: "postgres"
+      DISCORDDATAMIRROR_PASSWORD: "${POSTGRES_PASSWORD}"
+      DISCORDDATAMIRROR_URI: "postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/discorddatamirror"
+      DISCORDDATAMIRROR_JDBCCONNECTIONSTRING: "jdbc:postgresql://postgres:5432/discorddatamirror"
+      DISCORDDATAMIRROR_DATABASENAME: "discorddatamirror"
+      DASHBOARD_HTTP: "http://dashboard:${DASHBOARD_PORT}"
+      services__dashboard__http__0: "http://dashboard:${DASHBOARD_PORT}"
+      DASHBOARD_HTTPS: "https://dashboard:${DASHBOARD_PORT}"
+      Discord__Token: "${DISCORD_TOKEN}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://docker-compose-dashboard:18889"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "bot"
+    depends_on:
+      postgres:
+        condition: "service_started"
+      dashboard:
+        condition: "service_started"
+    networks:
+      - "aspire"
+networks:
+  aspire:
+    driver: "bridge"
+volumes:
+  discorddatamirror-postgres-data:
+    driver: "local"
