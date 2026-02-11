@@ -59,10 +59,10 @@ public class DashboardSteps(ScenarioContext scenarioContext)
             // Fallback wait
         }
         await Task.Delay(2000); // Give Blazor extra time to hydrate components
-        
+
         var card = Page.Locator(".mud-card").Filter(new() { HasText = serverName });
         await card.First.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
-        
+
         // Try clicking multiple times in case the first click doesn't register
         for (int i = 0; i < 3; i++)
         {
@@ -78,7 +78,7 @@ public class DashboardSteps(ScenarioContext scenarioContext)
                 await Task.Delay(1000);
             }
         }
-        
+
         // If we got here, navigation never happened
         throw new Exception($"Failed to navigate to guild page after clicking server card '{serverName}'");
     }

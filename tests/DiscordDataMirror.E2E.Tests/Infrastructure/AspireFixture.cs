@@ -15,12 +15,12 @@ public class AspireFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         _factory = new TestWebApplicationFactory();
-        
+
         // Start the real web server
         await _factory.StartAsync();
-        
+
         DashboardUrl = _factory.BaseUrl;
-        
+
         // Give the server a moment to fully initialize
         await Task.Delay(TimeSpan.FromSeconds(1));
     }

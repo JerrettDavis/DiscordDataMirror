@@ -34,7 +34,7 @@ public class TestWebApplicationFactory : IAsyncDisposable
         socket.Start();
         _port = ((IPEndPoint)socket.LocalEndpoint).Port;
         socket.Stop();
-        
+
         // Create a unique temp database file for this test run
         _dbPath = Path.Combine(Path.GetTempPath(), $"discord_mirror_test_{Guid.NewGuid():N}.db");
     }
@@ -47,10 +47,10 @@ public class TestWebApplicationFactory : IAsyncDisposable
         // Find the Dashboard project path
         var dashboardAssembly = typeof(DiscordDataMirror.Dashboard.Program).Assembly;
         var dashboardPath = Path.GetDirectoryName(dashboardAssembly.Location)!;
-        
+
         // Navigate up to find the project root (from bin/Debug/net10.0)
         var projectRoot = Path.GetFullPath(Path.Combine(dashboardPath, "..", "..", "..", "..", "..", "src", "DiscordDataMirror.Dashboard"));
-        
+
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
             EnvironmentName = "Testing",
@@ -112,7 +112,7 @@ public class TestWebApplicationFactory : IAsyncDisposable
         // Use static files instead of MapStaticAssets for testing
         // (MapStaticAssets requires manifest files not available in test context)
         _app.UseStaticFiles();
-        
+
         _app.MapRazorComponents<App>()
             .AddInteractiveServerRenderMode();
 
@@ -139,7 +139,7 @@ public class TestWebApplicationFactory : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await StopAsync();
-        
+
         // Clean up the temp database file
         try
         {
