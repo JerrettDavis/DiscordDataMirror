@@ -69,7 +69,7 @@ Find any message across all your servers instantly.
 ### 🎨 Beautiful Dashboard
 A modern, Discord-like interface for browsing your archives.
 
-![Dashboard Preview](docs/images/dashboard-preview.svg)
+![Dashboard Preview](docs/images/dashboard-home.png)
 
 - Familiar Discord-style message rendering
 - Channel browser with message counts
@@ -152,7 +152,7 @@ The bot will begin syncing historical messages in the background. This may take 
 <details>
 <summary><strong>Dashboard Overview</strong></summary>
 
-![Dashboard Overview](docs/images/dashboard-overview.svg)
+![Dashboard Overview](docs/images/dashboard-home.png)
 
 View all your monitored servers at a glance with message counts, member stats, and sync status.
 </details>
@@ -176,7 +176,7 @@ Read messages exactly as they appeared in Discord, complete with embeds, reactio
 <details>
 <summary><strong>Sync Status</strong></summary>
 
-![Sync Status](docs/images/sync-status.svg)
+![Sync Status](docs/images/sync-status.png)
 
 Monitor real-time synchronization progress across all your servers.
 </details>

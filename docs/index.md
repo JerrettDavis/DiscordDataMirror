@@ -2,7 +2,7 @@
 
 Welcome to the official documentation for **DiscordDataMirror** — a powerful, open-source solution for monitoring, archiving, and exploring Discord server data.
 
-![Dashboard Preview](images/dashboard-preview.svg)
+![Dashboard Preview](images/dashboard-home.png)
 
 ## What is DiscordDataMirror?
 
@@ -62,7 +62,7 @@ Learn from a production-quality .NET Aspire application with Domain-Driven Desig
 ## Screenshots
 
 ### Dashboard Overview
-![Dashboard Overview](images/dashboard-overview.svg)
+![Dashboard Overview](images/dashboard-home.png)
 
 ### Channel Browser
 ![Channel Browser](images/channel-browser.svg)
@@ -71,7 +71,7 @@ Learn from a production-quality .NET Aspire application with Domain-Driven Desig
 ![Message Viewer](images/message-viewer.svg)
 
 ### Sync Status
-![Sync Status](images/sync-status.svg)
+![Sync Status](images/sync-status.png)
 
 ## Technology Stack
 
