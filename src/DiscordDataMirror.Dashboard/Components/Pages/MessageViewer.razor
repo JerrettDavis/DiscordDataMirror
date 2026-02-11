@@ -192,6 +192,7 @@
             .Include(m => m.Attachments)
             .Include(m => m.Embeds)
             .Include(m => m.Reactions)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(m => m.Id == messageId);
 
         if (message != null && _messages != null)
@@ -229,6 +230,7 @@
                 .Include(m => m.Attachments)
                 .Include(m => m.Embeds)
                 .Include(m => m.Reactions)
+                .AsSplitQuery()
                 .FirstOrDefaultAsync(m => m.Id == messageId);
 
             if (updatedMessage != null)
@@ -277,13 +279,14 @@
             .Where(m => m.ChannelId == channelSnowflake)
             .LongCountAsync();
 
-        // Load latest messages
+        // Load latest messages (use split query to avoid cartesian explosion)
         _messages = await dbContext.Messages
             .Where(m => m.ChannelId == channelSnowflake)
             .Include(m => m.Author)
             .Include(m => m.Attachments)
             .Include(m => m.Embeds)
             .Include(m => m.Reactions)
+            .AsSplitQuery()
             .OrderByDescending(m => m.Timestamp)
             .Take(PageSize)
             .ToListAsync();
@@ -311,6 +314,7 @@
             .Include(m => m.Attachments)
             .Include(m => m.Embeds)
             .Include(m => m.Reactions)
+            .AsSplitQuery()
             .OrderByDescending(m => m.Timestamp)
             .Take(PageSize)
             .ToListAsync();
@@ -344,6 +348,7 @@
             .Include(m => m.Attachments)
             .Include(m => m.Embeds)
             .Include(m => m.Reactions)
+            .AsSplitQuery()
             .OrderBy(m => m.Timestamp)
             .Take(PageSize)
             .ToListAsync();
@@ -374,6 +379,7 @@
             .Include(m => m.Attachments)
             .Include(m => m.Embeds)
             .Include(m => m.Reactions)
+            .AsSplitQuery()
             .OrderBy(m => m.Timestamp)
             .Take(PageSize)
             .ToListAsync();
@@ -407,12 +413,13 @@
         var channelSnowflake = new Snowflake(ulong.Parse(ChannelId));
 
         _messages = await dbContext.Messages
-            .Where(m => m.ChannelId == channelSnowflake && 
+            .Where(m => m.ChannelId == channelSnowflake &&
                 (m.Content != null && m.Content.Contains(_searchQuery)))
             .Include(m => m.Author)
             .Include(m => m.Attachments)
             .Include(m => m.Embeds)
             .Include(m => m.Reactions)
+            .AsSplitQuery()
             .OrderByDescending(m => m.Timestamp)
             .Take(PageSize)
             .ToListAsync();

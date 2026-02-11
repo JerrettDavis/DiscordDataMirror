@@ -3,12 +3,10 @@
 @inject IDbContextFactory<DiscordMirrorDbContext> DbContextFactory
 @implements IDisposable
 
-<MudThemeProvider Theme="_theme" IsDarkMode="true" />
-<MudPopoverProvider />
-<MudDialogProvider />
-<MudSnackbarProvider />
+<MudProviders Theme="_theme" IsDarkMode="true" />
 
-<div class="app-container" style="display: grid !important; grid-template-columns: 72px 1fr !important; height: 100vh; width: 100vw;">
+<CascadingValue Value="this">
+    <div class="app-container" style="display: grid !important; grid-template-columns: 72px 1fr !important; height: 100vh; width: 100vw;">
     @* Server list sidebar (far left, like Discord) *@
     <div class="server-list-sidebar" style="grid-column: 1; height: 100vh; display: flex; flex-direction: column; align-items: center; background-color: #1e1f22; padding-top: 12px; overflow-y: auto;">
         <div class="server-list-content">
@@ -129,7 +127,8 @@
         </MudMainContent>
     </MudLayout>
     </div>
-</div>
+    </div>
+</CascadingValue>
 
 <style>
     /* Channel list styling - these complement the global styles in app.css */

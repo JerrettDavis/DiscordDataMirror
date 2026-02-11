@@ -1,0 +1,11 @@
+@rendermode InteractiveServer
+
+<MudThemeProvider Theme="@Theme" IsDarkMode="@IsDarkMode" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+@code {
+    [Parameter] public MudBlazor.MudTheme? Theme { get; set; }
+    [Parameter] public bool IsDarkMode { get; set; } = true;
+}

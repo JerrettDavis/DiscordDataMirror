@@ -65,7 +65,8 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveServerRenderMode()
+    .AddAdditionalAssemblies(typeof(MudBlazor.MudThemeProvider).Assembly);
 
 // Map API endpoints
 app.MapAttachmentEndpoints();
