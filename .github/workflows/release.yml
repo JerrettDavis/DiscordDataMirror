@@ -86,7 +86,7 @@ jobs:
             -p:Version=${{ steps.version.outputs.version }}
 
       - name: Build and push Bot image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./publish/bot
           file: ./src/DiscordDataMirror.Bot/Dockerfile
@@ -100,7 +100,7 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
 
       - name: Build and push Dashboard image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./publish/dashboard
           file: ./src/DiscordDataMirror.Dashboard/Dockerfile
