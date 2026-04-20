@@ -441,18 +441,20 @@
 
     private async Task OpenSyncAllDialog()
     {
-        var result = await DialogService.ShowMessageBox(
-            "Sync All Guilds",
-            "This will trigger a full sync for all guilds. This may take a while and use API quota. Continue?",
-            yesText: "Sync All",
-            cancelText: "Cancel");
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { x => x.ContentText, "This will trigger a full sync for all guilds. This may take a while and use API quota. Continue?" },
+            { x => x.YesText, "Sync All" }
+        };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Sync All Guilds", parameters);
+        var result = await dialog.Result;
 
-        if (result == true && _guilds != null)
+        if (result is { Canceled: false } && _guilds != null)
         {
             foreach (var guild in _guilds)
             {
                 await TriggerGuildSync(guild.Id.ToString(), guild.Name);
-                await Task.Delay(500); // Small delay between requests
+                await Task.Delay(500);
             }
         }
     }
