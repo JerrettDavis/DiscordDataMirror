@@ -19,7 +19,7 @@ jobs:
   validate:
     name: Validate PR
     runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false && github.actor != 'dependabot[bot]'
 
     steps:
       - name: Checkout code
