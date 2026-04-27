@@ -128,7 +128,7 @@ jobs:
 
       - name: Upload Dashboard test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dashboard-test-results
           path: tests/DiscordDataMirror.Dashboard.Tests/TestResults/
@@ -179,7 +179,7 @@ jobs:
 
       - name: Upload E2E test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-test-results
           path: tests/DiscordDataMirror.E2E.Tests/TestResults/
