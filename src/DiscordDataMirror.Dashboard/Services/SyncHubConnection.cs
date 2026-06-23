@@ -158,7 +158,7 @@ public sealed class SyncHubConnection : IAsyncDisposable
         if (_hubConnection is { State: HubConnectionState.Connected })
         {
             await _hubConnection.InvokeAsync("SubscribeToGuild", guildId);
-            _logger.LogDebug("Subscribed to guild {GuildId}", guildId);
+            _logger.LogDebug("Subscribed to guild {GuildId}", guildId.SanitizeForLog());
         }
     }
 
@@ -170,7 +170,7 @@ public sealed class SyncHubConnection : IAsyncDisposable
         if (_hubConnection is { State: HubConnectionState.Connected })
         {
             await _hubConnection.InvokeAsync("UnsubscribeFromGuild", guildId);
-            _logger.LogDebug("Unsubscribed from guild {GuildId}", guildId);
+            _logger.LogDebug("Unsubscribed from guild {GuildId}", guildId.SanitizeForLog());
         }
     }
 
@@ -182,7 +182,7 @@ public sealed class SyncHubConnection : IAsyncDisposable
         if (_hubConnection is { State: HubConnectionState.Connected })
         {
             await _hubConnection.InvokeAsync("SubscribeToChannel", channelId);
-            _logger.LogDebug("Subscribed to channel {ChannelId}", channelId);
+            _logger.LogDebug("Subscribed to channel {ChannelId}", channelId.SanitizeForLog());
         }
     }
 
@@ -194,7 +194,7 @@ public sealed class SyncHubConnection : IAsyncDisposable
         if (_hubConnection is { State: HubConnectionState.Connected })
         {
             await _hubConnection.InvokeAsync("UnsubscribeFromChannel", channelId);
-            _logger.LogDebug("Unsubscribed from channel {ChannelId}", channelId);
+            _logger.LogDebug("Unsubscribed from channel {ChannelId}", channelId.SanitizeForLog());
         }
     }
 
@@ -230,7 +230,7 @@ public sealed class SyncHubConnection : IAsyncDisposable
         if (_hubConnection is { State: HubConnectionState.Connected })
         {
             await _hubConnection.InvokeAsync("RequestGuildSync", guildId, backfillMessages, messageLimit);
-            _logger.LogInformation("Requested sync for guild {GuildId}", guildId);
+            _logger.LogInformation("Requested sync for guild {GuildId}", guildId.SanitizeForLog());
         }
         else
         {
@@ -246,7 +246,7 @@ public sealed class SyncHubConnection : IAsyncDisposable
         if (_hubConnection is { State: HubConnectionState.Connected })
         {
             await _hubConnection.InvokeAsync("RequestChannelSync", guildId, channelId, backfillMessages, messageLimit);
-            _logger.LogInformation("Requested sync for channel {ChannelId} in guild {GuildId}", channelId, guildId);
+            _logger.LogInformation("Requested sync for channel {ChannelId} in guild {GuildId}", channelId.SanitizeForLog(), guildId.SanitizeForLog());
         }
         else
         {
